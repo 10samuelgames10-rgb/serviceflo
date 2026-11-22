@@ -17,7 +17,22 @@ All-in-one software for mobile detailing businesses: calendar, CRM, payroll, inv
 - Products and services editor, branded booking page (shop or step-by-step) and lead forms
 - Multiple locations (Victoria and Vancouver)
 
-## Next: the real version
+## The real app (in progress)
+
+The real app lives in this repository: Next.js for the app, Supabase for the database and logins. To put it online, follow `docs/SETUP.md`.
+
+Built so far:
+
+- Sign in, create your business (locations, owner, starter services and checklists)
+- Calendar (month and week) with revenue, collected, booked-ahead and hours
+- New job form, and a job screen with status steps, cancel, checklist, discount, notes, tech and reschedule
+- Customers list with visits, spend and status, and customer profiles with notes and history
+- Team and Services pages for owners and managers
+- Security: every business only sees its own data (row level security, tested)
+
+To run it on a computer: copy `.env.example` to `.env.local`, fill in the two Supabase values, then `npm install` and `npm run dev`.
+
+## Roadmap
 
 1. Accounts needed (owner creates these): Supabase (database and logins), Vercel (hosting), Meta for Developers (Facebook lead ads), Stripe (payments).
 2. Build the real app (Next.js + Supabase), starting with logins, customers, jobs and the calendar.
