@@ -36,6 +36,10 @@ button{cursor:pointer}
 .rail label.eyebrow{color:var(--rail-muted);padding:0 6px}
 .rail select{width:100%;background:var(--rail-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--rail-fg)}
 .nav{display:flex;flex-direction:column;gap:2px}
+.refc{font-family:ui-monospace,Menlo,monospace;font-weight:600;background:var(--accent-soft);color:var(--accent);padding:2px 7px;border-radius:6px;font-size:12px}
+.uchip[draggable=true]{cursor:grab}
+.cal-dragging{opacity:.45}
+.uc-cell.drop-over{background:#e3eeff!important;box-shadow:inset 0 0 0 2px var(--accent)}
 .biz-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:var(--shadow-sm);min-width:0}
 .biz-logo{width:38px;height:38px;border-radius:99px;overflow:hidden;flex:none;display:grid;place-items:center;font-size:18px;background:var(--surface-2)}
 .biz-logo img{width:100%;height:100%;object-fit:cover}
@@ -1045,7 +1049,7 @@ function setTop(title,sub,right=''){
   $('#top').innerHTML=`<div><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="grow"></div>${right}<span class="sample">Sample data</span>`;
 }
 function render(){
-  ensureBrand();ensureInvoices();
+  ensureBrand();ensureInvoices();ensureRefs();
   renderShell();
   const v=current();
   ({calendar:viewCalendar,pipeline:viewPipeline,customers:viewCustomers,invoices:viewInvoices,team:viewTeam,numbers:viewNumbers,services:viewServices,booking:viewBooking,automations:viewAutomations,roadmap:viewRoadmap})[v]();
@@ -1075,7 +1079,7 @@ const holCache={};
 const holiday=ds=>{const y=+ds.slice(0,4);if(!holCache[y])holCache[y]=holidaysFor(y);return holCache[y][ds]};
 function ucVisible(){return S.jobs.filter(j=>inLoc(j)&&(!isTech()||j.emp===me())&&(UI.calEmp==='all'||j.emp===UI.calEmp))}
 function ucLabel(j){const c=cust(j.cust)||{};return `${j.id} - ${c.vehicle||''}`}
-function uchip(j){const c=cust(j.cust)||{};return `<button class="uchip" style="--c:${UC_COL[j.status]}" data-st="${j.status}" data-act="job" data-id="${j.id}" title="${esc(c.name)} · ${fmtTime(j.start)} · ${esc(svc(j.svc).name)} · ${LOCS[j.loc].name}">${esc(ucLabel(j))}</button>`}
+function uchip(j){const c=cust(j.cust)||{};return `<button class="uchip" ${!isTech()&&j.status!=='paid'&&j.status!=='cancelled'?`draggable="true" data-cjob="${j.id}"`:''} style="--c:${UC_COL[j.status]}" data-st="${j.status}" data-act="job" data-id="${j.id}" title="${esc(c.name)} · ${fmtTime(j.start)} · ${esc(svc(j.svc).name)} · ${LOCS[j.loc].name}">${esc(ucLabel(j))}</button>`}
 function ucAgendaList(list){
   const by={};list.forEach(j=>(by[j.date]=by[j.date]||[]).push(j));
   const days=Object.keys(by).sort();
@@ -1097,7 +1101,7 @@ function ucMonth(all){
       const day=addDays(ws,d),ds=ymd(day),list=by[ds]||[],hn=holiday(ds),cap=hn?3:4;
       list.forEach(j=>{if(j.status!=='cancelled'&&j.status!=='quote')wk+=sub(j)});
       const dn=day.getDate()===1?`<b>${MONTHS[day.getMonth()].slice(0,3)}</b>&nbsp;1`:day.getDate();
-      cells+=`<div class="uc-cell ${day.getMonth()!==m.getMonth()?'out':''}"><div class="uc-dh"><button class="uc-dn ${ds===TODAYS?'today':''}" data-act="ucday" data-date="${ds}" aria-label="Open week of ${fmtDate(day)}">${dn}</button>${isTech()?'':`<button class="uc-plus" data-act="newjob" data-date="${ds}" aria-label="Add job on ${fmtDate(day)}">+</button>`}</div>
+      cells+=`<div class="uc-cell ${day.getMonth()!==m.getMonth()?'out':''}" ${isTech()?'':`data-drop-date="${ds}"`}><div class="uc-dh"><button class="uc-dn ${ds===TODAYS?'today':''}" data-act="ucday" data-date="${ds}" aria-label="Open week of ${fmtDate(day)}">${dn}</button>${isTech()?'':`<button class="uc-plus" data-act="newjob" data-date="${ds}" aria-label="Add job on ${fmtDate(day)}">+</button>`}</div>
         ${hn?`<div class="uchip hol">${hn}</div>`:''}${list.slice(0,cap).map(uchip).join('')}${list.length>cap?`<button class="uc-more" data-act="ucday" data-date="${ds}">+${list.length-cap} more</button>`:''}</div>`;
     }
     cells+=`<div class="uc-wk">${isTech()?'':`<span class="eyebrow">Week</span><span class="num">${money(wk)}</span>`}</div>`;
@@ -1338,6 +1342,7 @@ function openNewJob(date,lead,custId){
    <div class="grid2"><div class="field"><label for="nj-name">Customer name</label><input class="in" id="nj-name" value="${esc(lead?lead.name:'')}"></div>
    <div class="field"><label for="nj-phone">Phone</label><input class="in" id="nj-phone" value="${esc(lead?lead.phone:'')}"></div></div>
    <div class="field"><label for="nj-addr">Address</label><input class="in" id="nj-addr" value="${esc(lead&&lead.address||'')}"></div>
+   ${custId?'':'<div class="field"><label for="nj-ref">Referral code (optional)</label><input class="in" id="nj-ref" placeholder="MEGAN50" autocapitalize="characters"></div>'}
    <div class="grid2"><div class="field"><label for="nj-veh">Vehicle</label><input class="in" id="nj-veh" value="${esc(lead?lead.vehicle:'')}"></div>
    <div class="field"><label for="nj-size">Size</label><select class="in" id="nj-size">${Object.entries(SIZES).map(([k,v])=>`<option value="${k}" ${lead&&lead.size===k?'selected':''}>${v.name}</option>`).join('')}</select></div></div>
    <div class="grid2"><div class="field"><label for="nj-svc">Service</label><select class="in" id="nj-svc">${S.services.map(s=>`<option value="${s.id}" ${lead&&lead.svc===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
@@ -1351,7 +1356,9 @@ function saveNewJob(leadId,custId){
   if(!v('nj-name')){toast('Add the customer name first');return}
   const loc=v('nj-loc'),size=v('nj-size'),sv=v('nj-svc'),lead=leadId&&S.leads.find(l=>l.id===leadId);
   let c=custId&&cust(custId);
-  if(!c){c={id:'c'+Date.now(),loc,source:lead?lead.source:'referral',size,vehicle:v('nj-veh')||'Vehicle',first:v('nj-date')||TODAYS,name:v('nj-name'),phone:v('nj-phone')||'—',address:v('nj-addr')||'—'};
+  let referredBy=null;const rc=($('#nj-ref')?$('#nj-ref').value:'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!c&&rc){const r=S.customers.find(x=>x.ref===rc);if(!r){toast(`No customer has the code ${rc}. Check the spelling or leave it blank.`);return}referredBy=r.id}
+  if(!c){c={id:'c'+Date.now(),referredBy,loc,source:referredBy?'referral':lead?lead.source:'referral',size,vehicle:v('nj-veh')||'Vehicle',first:v('nj-date')||TODAYS,name:v('nj-name'),phone:v('nj-phone')||'—',address:v('nj-addr')||'—'};
   S.customers.push(c);}
   const techs=EMP.filter(e=>e.loc===loc&&e.wage);
   const j={id:nextJobId(),date:c.first,start:+v('nj-time'),loc,cust:c.id,emp:techs[0].id,svc:sv,size,price:svc(sv).price[size],addons:[],status:'scheduled',tip:0,checks:{},notes:''};
@@ -1492,22 +1499,23 @@ function viewCustomers(){
 }
 function custFiltered(){
   const q=(UI.cq||'').toLowerCase();
-  let rows=custRows().filter(r=>(UI.cseg==='all'||r.x.st.k===UI.cseg)&&(!q||(r.c.name+' '+r.c.phone+' '+r.c.vehicle).toLowerCase().includes(q)));
+  let rows=custRows().filter(r=>(UI.cseg==='all'||r.x.st.k===UI.cseg)&&(!q||(r.c.name+' '+r.c.phone+' '+r.c.vehicle+' '+(r.c.ref||'')).toLowerCase().includes(q)));
   const by={due:(a,b)=>(a.x.dueIn??1e9)-(b.x.dueIn??1e9),spend:(a,b)=>b.x.spend-a.x.spend,last:(a,b)=>(b.x.last||'').localeCompare(a.x.last||''),visits:(a,b)=>b.x.n-a.x.n}[UI.csort];
   return rows.sort(by);
 }
 function drawCustTable(){
   const el=$('#custTable');if(!el)return;
   const rows=custFiltered();
-  el.innerHTML=`<table class="tbl ctbl"><thead><tr><th class="l">Customer</th><th class="l">Status</th><th>Visits</th><th>Lifetime spend</th><th class="l">Frequency</th><th>Last service</th><th>Next due</th><th class="l">Latest note</th></tr></thead><tbody>
+  el.innerHTML=`<table class="tbl ctbl"><thead><tr><th class="l">Customer</th><th class="l">Referral code</th><th class="l">Status</th><th>Visits</th><th>Lifetime spend</th><th class="l">Frequency</th><th>Last service</th><th>Next due</th><th class="l">Latest note</th></tr></thead><tbody>
    ${rows.slice(0,300).map(({c,x})=>{const nt=ensureNotes(c);return `<tr data-act="cust" data-id="${c.id}">
     <td class="l"><b>${esc(c.name)}</b><span class="sub">${esc(c.vehicle)}${UI.loc==='all'?' · '+LOCS[c.loc].name:''}</span></td>
+    <td class="l"><code class="refc">${esc(c.ref||'')}</code></td>
     <td class="l"><span class="pill ${x.st.cls}">${x.st.name}</span></td>
     <td>${x.n}</td><td>${money(x.spend)}</td>
     <td class="l">${x.freq}</td>
     <td>${x.last?fmtDate(parse(x.last)):'—'}</td>
     <td style="color:${x.dueIn<0?'var(--bad)':x.dueIn<=14?'var(--warn)':'inherit'}">${x.nextDue?(x.upcoming?'Booked '+fmtDate(x.nextDue):x.dueIn<0?Math.abs(x.dueIn)+'d overdue':'in '+x.dueIn+'d'):'—'}</td>
-    <td class="l note">${nt.length?esc(nt[nt.length-1].text):'<span style="opacity:.6">Add a note</span>'}</td></tr>`}).join('')||'<tr><td class="l muted" colspan="8">No customers match.</td></tr>'}
+    <td class="l note">${nt.length?esc(nt[nt.length-1].text):'<span style="opacity:.6">Add a note</span>'}</td></tr>`}).join('')||'<tr><td class="l muted" colspan="9">No customers match.</td></tr>'}
   </tbody></table>`;
 }
 function openCustomer(id){
@@ -1524,7 +1532,14 @@ function openCustomer(id){
      <div><span>Frequency</span><b style="font-size:13.5px">${x.freq}</b></div>
      <div><span>Next due</span><b style="font-size:13.5px">${x.nextDue?(x.upcoming?'Booked '+fmtDate(x.nextDue):fmtDate(x.nextDue)):'—'}</b></div>
      <div><span>Tips given</span><b>${money(x.tips)}</b></div>
+     <div><span>Referral code</span><b><code class="refc">${esc(c.ref||'')}</code></b></div>
+     <div><span>People referred</span><b>${S.customers.filter(o=>o.referredBy===c.id).length}</b></div>
     </div>
+    <div class="panel"><div class="panel-h"><h3>Referrals</h3></div><div class="panel-b" style="display:grid;gap:8px;font-size:13.5px">
+     <span>Their code is <code class="refc">${esc(c.ref||'')}</code>. When a new customer gives this code, enter it when you book them and they're linked here.</span>
+     ${c.referredBy&&cust(c.referredBy)?`<span>Referred by <button class="btn ghost sm" style="padding:0;color:var(--accent)" data-act="cust" data-id="${c.referredBy}">${esc(cust(c.referredBy).name)}</button> (${esc(cust(c.referredBy).ref||'')})</span>`:''}
+     ${(()=>{const rs=S.customers.filter(o=>o.referredBy===c.id);return rs.length?`<span>Referred: ${rs.map(o=>`<button class="btn ghost sm" style="padding:0;color:var(--accent)" data-act="cust" data-id="${o.id}">${esc(o.name)}</button>`).join(', ')}</span>`:'<span class="muted">Nobody has used their code yet.</span>'})()}
+    </div></div>
     <div class="panel"><div class="panel-h"><h3>Notes</h3><span class="muted" style="font-size:12px">Only your team sees these</span></div><div class="panel-b" style="display:grid;gap:10px">
      <textarea class="in" id="cnote" rows="3" placeholder="Dogs, gate codes, preferences, upsell ideas…"></textarea>
      <div><button class="btn pri" data-act="addnote" data-id="${c.id}">Add note</button></div>
@@ -1558,6 +1573,14 @@ function openCustText(list){
 const INV_SET_DEFAULT={gst:'',address:'Victoria & Vancouver, BC',terms:'7',next:1001,etransfer:'',footer:'Thank you for choosing us! Questions about this invoice? Just reply to the text or email it came with.'};
 const INV_PILL={draft:['Draft','st-quote'],sent:['Sent','st-scheduled'],overdue:['Overdue','st-cancelled'],paid:['Paid','st-paid'],void:['Void','st-quote']};
 const TERMS=[['0','Due on receipt'],['7','Net 7 days'],['14','Net 14 days'],['30','Net 30 days']];
+function ensureRefs(){
+  const used=new Set(S.customers.filter(c=>c.ref).map(c=>c.ref));let changed=false;
+  for(const c of S.customers){if(c.ref)continue;
+    let base=(c.name||'').trim().split(/\s+/)[0].normalize('NFD').replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,12)||'FRIEND',code='',k=0;
+    do{k++;code=base+(k<=9?(Math.floor(Math.random()*9)+1)*10:k<=60?Math.floor(Math.random()*90)+10:Math.floor(Math.random()*900)+100)}while(used.has(code)&&k<500);
+    c.ref=code;used.add(code);changed=true}
+  if(changed)save();
+}
 function ensureInvoices(){
   if(!S.invSet)S.invSet=JSON.parse(JSON.stringify(INV_SET_DEFAULT));
   if(!S.invoices){S.invoices=[];const from=ymd(addDays(TODAY,-45));
@@ -2487,6 +2510,7 @@ document.addEventListener('click',ev=>{
     case 'ltext':UI.pipeSel=new Set([id]);openBulk();break;
     case 'selmode':UI.selMode=!UI.selMode;if(!UI.selMode)UI.pipeSel.clear();render();break;
     case 'cust':openCustomer(id);break;
+    case 'calmove':{const m=UI.calMove;if(!m)break;const j=job(m.id),c=cust(j.cust);j.date=m.to;const n=t.dataset.n==='1';if(n)(c.log=c.log||[]).push({at:Date.now(),txt:m.msg});UI.calMove=null;save();closeLayer();render();toast(n?`Moved to ${fmtDate(parse(m.to))}. Text to ${c.name.split(' ')[0]} queued.`:`Moved to ${fmtDate(parse(m.to))}.`);break}
     case 'ivpdf':{if(!window.jspdf){toast('The PDF tool did not load. Check your internet connection and reload.');break}const d=UI.iv.d;let blob;try{blob=invoicePdf(d)}catch(e){toast('Could not build the PDF');break}saveFile(`${d.num} - ${(d.bill.name||'Customer').replace(/[\\/:*?"<>|]/g,'')}.pdf`,blob);break}
     case 'ivcsv':{const tab=UI.ivTab||'all',q=(UI.ivQ||'').toLowerCase();const rows=S.invoices.filter(i=>inLoc(i)&&(tab==='all'||invStat(i)===tab)&&(!q||(i.num+' '+i.bill.name+' '+i.bill.phone).toLowerCase().includes(q))).sort((a,b)=>a.num.localeCompare(b.num,undefined,{numeric:true}));
       if(!rows.length){toast('No invoices in this list to export');break}
@@ -2630,6 +2654,17 @@ document.addEventListener('change',ev=>{
   else if(a==='svcbook'){svc(id).book=t.checked;save();toast(t.checked?'Now on the booking page':'Hidden from the booking page')}
   else if(a==='auto'){S.autos.find(x=>x.id===id).on=t.checked;save();toast(t.checked?'Automation on':'Automation paused')}
 });
+// calendar drag & drop rescheduling
+let calDrag=null;
+document.addEventListener('dragstart',ev=>{const c=ev.target.closest&&ev.target.closest('[data-cjob]');if(!c)return;calDrag=+c.dataset.cjob;ev.dataTransfer.setData('text/plain','job');ev.dataTransfer.effectAllowed='move';c.classList.add('cal-dragging')});
+document.addEventListener('dragover',ev=>{if(calDrag==null)return;const cell=ev.target.closest&&ev.target.closest('[data-drop-date]');if(!cell)return;ev.preventDefault();document.querySelectorAll('.drop-over').forEach(x=>x!==cell&&x.classList.remove('drop-over'));cell.classList.add('drop-over')});
+document.addEventListener('drop',ev=>{if(calDrag==null)return;const cell=ev.target.closest&&ev.target.closest('[data-drop-date]');if(!cell)return;ev.preventDefault();cell.classList.remove('drop-over');const j=job(calDrag),to=cell.dataset.dropDate;calDrag=null;if(!j||to===j.date)return;
+  const c=cust(j.cust),first=c.name.split(' ')[0],msg=`Hi ${first}, your appointment with ${S.brand.name} has moved to ${fmtDate(parse(to))} at ${fmtTime(j.start)}. Reply here if that time doesn't work.`;
+  UI.calMove={id:j.id,to,msg};
+  modal('Reschedule job',`<p style="margin:0">Move <b>${j.id} - ${esc(c.vehicle)}</b> from ${fmtDate(parse(j.date))} to <b>${fmtDate(parse(to))}</b>, same start time (${fmtTime(j.start)})?</p>
+   <div class="eyebrow">Text ${esc(first)} will get</div><div class="sms">${esc(msg)}</div>
+   <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn" data-act="calmove" data-n="0">Move without texting</button><button class="btn pri" data-act="calmove" data-n="1">Move and text ${esc(first)}</button></div>`)});
+document.addEventListener('dragend',()=>{calDrag=null;document.querySelectorAll('.cal-dragging').forEach(x=>x.classList.remove('cal-dragging'));document.querySelectorAll('.drop-over').forEach(x=>x.classList.remove('drop-over'))});
 // pipeline drag & drop
 document.addEventListener('dragstart',ev=>{const c=ev.target.closest&&ev.target.closest('.card[data-lead]');if(!c)return;ev.dataTransfer.setData('text/plain',c.dataset.lead);ev.dataTransfer.effectAllowed='move';c.classList.add('drag')});
 document.addEventListener('dragend',ev=>{const c=ev.target.closest&&ev.target.closest('.card');if(c)c.classList.remove('drag');document.querySelectorAll('.col.over').forEach(x=>x.classList.remove('over'))});
