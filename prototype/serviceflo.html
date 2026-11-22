@@ -328,6 +328,19 @@ label.fb-row{grid-template-columns:auto auto minmax(0,1fr)}
 .rep-row b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
 .rep-ins{background:#fffbea;border:1px solid #f3e3a6;border-radius:10px;padding:12px 14px;font-size:13.5px;display:grid;gap:6px}
 .rep-foot{padding:14px 22px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+/* question editor */
+.qpanel{border-color:#9cc4f2;box-shadow:0 0 0 3px var(--accent-soft),var(--shadow-sm)}
+.qrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fbfdff}
+.qn{width:24px;height:24px;border-radius:99px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600;margin-top:7px}
+.qmain{display:grid;gap:8px;min-width:0}
+.qtext{font-weight:500}
+.qmeta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:12.5px}
+.qmeta select.in,.qmeta input.in{width:auto;flex:1;min-width:150px;padding:5px 8px;font-size:12.5px}
+.qmeta .toggle{font-size:12.5px}
+.qbtns{display:flex;flex-direction:column;gap:2px}
+.qbtns .btn{padding:2px 8px}
+.qsteps{display:grid;gap:8px}
+.qhint{background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:10px}
 /* calendar extras */
 .uc-row1{padding-bottom:16px}
 .uc-row1 .cal-stats{margin-left:auto}
@@ -1348,6 +1361,7 @@ function openLead(id){
     <dt>Value</dt><dd>${CAD(l.value)}</dd>
     <dt>Created</dt><dd>${age===0?'Today':age+' days ago'}</dd></dl>
    <div class="field"><label for="ld-stage">Stage</label><select class="in" id="ld-stage" data-act="pstage" data-id="${l.id}">${STAGES.map(s=>`<option value="${s.id}" ${s.id===l.stage?'selected':''}>${s.name}</option>`).join('')}<option value="lost" ${l.stage==='lost'?'selected':''}>Lost</option></select></div>
+   ${(l.answers||[]).length?`<div class="eyebrow">Form answers</div><dl class="kv">${l.answers.map(x=>`<dt>${esc(x.q)}</dt><dd>${esc(x.a)}</dd>`).join('')}</dl>`:''}
    ${l.log.length?`<div class="eyebrow">Texts sent</div>${l.log.map(m=>`<div class="sms">${esc(m.txt)}</div>`).join('')}`:''}
    <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" data-act="ltext" data-id="${l.id}">Text</button>${l.stage!=='won'?`<button class="btn pri" data-act="book" data-id="${l.id}">Book appointment</button>`:''}</div>`);
 }
@@ -2073,6 +2087,7 @@ function ensureBrand(){
   if(!S.brand.u1){S.brand.style='shop';S.brand.u1=1}
   if(!S.brand.u2){if(!S.brand.logo)S.brand.logo=DEFAULT_LOGO;S.brand.u2=1}
   if(!S.leadForm)S.leadForm=JSON.parse(JSON.stringify(LF_DEFAULT));
+  ensureQuestions();
   const CM={express:'inout',confidence:'inout',luxury:'premium',interior:'interior'};
   S.services.forEach(x=>{if(x.cat===undefined)x.cat=CM[x.id]||(x.plan?'':'inout');if(!x.exc)x.exc=x.id==='confidence'?['Deep seat shampoo','Deep odour removal','Clay bar + 4-month wax']:[];if(!x.inc)x.inc=[];if(!x.sop)x.sop=[]});
   if(!S.addons)S.addons=JSON.parse(JSON.stringify(ADDONS_DEFAULT));ADDONS=S.addons;
@@ -2115,8 +2130,9 @@ function viewBooking(){
   </div></div>`;
   if(tab==='lead'){
     const L=S.leadForm;
-    $('#view').innerHTML=`<div class="bk-layout"><div class="bk" id="lf"></div><div class="stack">
-     <div class="panel"><div class="panel-h"><h3>Form builder</h3></div><div class="panel-b" style="display:grid;gap:12px">
+    $('#view').innerHTML=`<div class="bk-layout"><div><div class="qhint">✎ Want different questions? Change the wording, order and which ones are asked in the <b>Questions</b> panel.</div><div class="bk" id="lf"></div></div><div class="stack">
+     ${qPanel('lf')}
+     <div class="panel"><div class="panel-h"><h3>Form settings</h3></div><div class="panel-b" style="display:grid;gap:12px">
       <div class="stylepick">
        <button class="${L.layout!=='steps'?'on':''}" data-act="lflayout" data-v="all"><div class="mini form"><i></i><i></i><i></i><i></i></div><b>All on one page</b><span>Short and simple. Good for your website.</span></button>
        <button class="${L.layout==='steps'?'on':''}" data-act="lflayout" data-v="steps"><div class="mini steps"><i></i><i></i><i></i><i></i></div><b>One question at a time</b><span>Feels quicker on a phone. Best for ad traffic.</span></button>
@@ -2126,10 +2142,6 @@ function viewBooking(){
       <div class="grid2"><div class="field"><label for="lf-c-button">Button text</label><input class="in" id="lf-c-button" data-lfc="button" value="${esc(L.button)}"></div>
       <div class="field"><label for="lf-c-loc">Send leads to</label><select class="in" id="lf-c-loc" data-lfc="loc"><option value="auto" ${L.loc==='auto'?'selected':''}>Location by postal code</option><option value="vic" ${L.loc==='vic'?'selected':''}>Victoria</option><option value="van" ${L.loc==='van'?'selected':''}>Vancouver</option></select></div></div>
       <div class="field"><label for="lf-c-thanks">Thank-you message</label><input class="in" id="lf-c-thanks" data-lfc="thanks" value="${esc(L.thanks)}"></div>
-      <div><div class="fieldrow" style="color:var(--muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em"><span>Field</span><span>Show</span><span>Required</span></div>
-      ${LF_FIELDS.map(([k,n])=>{const f=L.fields[k],lock=k==='name'||k==='phone';return `<div class="fieldrow"><span>${n}${lock?' <span class="muted" style="font-size:11px">· always on</span>':''}</span>
-        <label class="toggle"><input type="checkbox" id="lff-${k}-on" data-lff="${k}" data-k="on" ${f.on?'checked':''} ${lock?'disabled':''} aria-label="Show ${n}"></label>
-        <label class="toggle"><input type="checkbox" id="lff-${k}-req" data-lff="${k}" data-k="req" ${f.req?'checked':''} ${lock||!f.on?'disabled':''} aria-label="Require ${n}"></label></div>`}).join('')}</div>
      </div></div>
      ${brandPanel}
      <div class="panel"><div class="panel-h"><h3>Put it to work</h3></div><div class="panel-b" style="display:grid;gap:10px">
@@ -2142,7 +2154,7 @@ function viewBooking(){
     drawLeadForm();return;
   }
   const shop=B.style==='shop';
-  $('#view').innerHTML=`<div class="bk-layout ${shop?'shopmode':''}"><div>${shop?'<div class="bk shop" id="shop"></div>':'<div class="bk" id="bk"></div>'}</div>
+  $('#view').innerHTML=`<div class="bk-layout ${shop?'shopmode':''}"><div><div class="qhint">✎ Want different questions? Edit them in the <b>Questions</b> panel${shop?' below':''}.</div>${shop?'<div class="bk shop" id="shop"></div>':'<div class="bk" id="bk"></div>'}</div>
    <div class="stack">
     <div class="panel"><div class="panel-h"><h3>Booking style</h3></div><div class="panel-b" style="display:grid;gap:12px">
      <div class="stylepick">
@@ -2155,6 +2167,7 @@ function viewBooking(){
      ${shop?`<div class="field"><label for="br-terms">Terms &amp; conditions (one per line)</label><textarea class="in" id="br-terms" data-br="terms" rows="5">${esc(B.terms||'')}</textarea></div>`:''}
      ${shop?`<div class="field"><label>Category photos</label>${SHOP_CATS.map(c=>`<div class="fileline" style="padding:4px 0"><span class="thumb">${catArt(c)}</span><span style="flex:1;min-width:120px">${c.name}</span><label class="btn sm" for="ci-${c.id}">Upload photo</label><input type="file" id="ci-${c.id}" data-catimg="${c.id}" accept="image/*">${S.brand.catImg[c.id]?`<button class="btn ghost sm" data-act="catimg-rm" data-id="${c.id}">Remove</button>`:''}</div>`).join('')}</div>`:''}
     </div></div>
+    ${qPanel('bk')}
     ${brandPanel}
     <div class="panel"><div class="panel-h"><h3>Share it</h3></div><div class="panel-b" style="display:grid;gap:10px">
      <div class="field"><label>Link</label><code class="snip">book.caninecarcare.ca${UI.loc==='all'?'':'/'+UI.loc}</code></div>
@@ -2183,16 +2196,17 @@ function drawLeadForm(){
   let body,top='',foot='';
   if(UI.lfDone)body=`<div class="done"><div class="ok">✓</div><h4>${esc(L.thanks)}</h4><button class="bk-btn" data-lf="again">Submit another</button></div>`;
   else if(!steps){
-    body=LF_FIELDS.filter(([k])=>L.fields[k].on).map(([k,n])=>`<label class="lfl"><span>${n}${L.fields[k].req?' <em>*</em>':''}</span>${lfInput(k)}</label>`).join('')+
+    body=qItems('lf').filter(it=>it.on).map(it=>`<label class="lfl"><span>${esc(it.q)}${it.req?' <em>*</em>':''}</span>${it.builtin?lfInput(it.k):qInput('lf-',it,UI.lf.vals[it.k])}</label>`).join('')+
       `<button class="bk-btn" data-lf="submit" style="width:100%">${esc(L.button)}</button>${consent}`;
   }else{
-    const order=LF_STEP_ORDER.filter(k=>L.fields[k].on),i=Math.min(UI.lf.step,order.length-1),k=order[i],last=i===order.length-1;
+    const order=qItems('lf').filter(x=>x.on),i=Math.min(UI.lf.step,order.length-1),it=order[i],k=it.k,last=i===order.length-1;
     let ctl;
-    if(k==='size')ctl=`<div class="opts3">${Object.entries(SIZES).map(([x,v])=>`<button class="opt ${UI.lf.vals.size===x?'on':''}" data-lf="pick" data-k="size" data-v="${x}"><span class="t">${v.name}</span><span class="s">${v.eg}</span></button>`).join('')}</div>`;
+    if(!it.builtin)ctl=it.type==='choice'?(it.options||[]).map(o=>`<button class="opt ${UI.lf.vals[k]===o?'on':''}" data-lf="pick" data-k="${k}" data-v="${esc(o)}"><span class="t">${esc(o)}</span></button>`).join(''):qInput('lf-',it,UI.lf.vals[k]);
+    else if(k==='size')ctl=`<div class="opts3">${Object.entries(SIZES).map(([x,v])=>`<button class="opt ${UI.lf.vals.size===x?'on':''}" data-lf="pick" data-k="size" data-v="${x}"><span class="t">${v.name}</span><span class="s">${v.eg}</span></button>`).join('')}</div>`;
     else if(k==='service')ctl=S.services.filter(x=>x.book).map(x=>`<button class="opt ${UI.lf.vals.service===x.id?'on':''}" data-lf="pick" data-k="service" data-v="${x.id}"><span class="t">${esc(x.name)}</span><span class="s">${esc(x.blurb)}</span></button>`).join('')+
       `<button class="opt ${UI.lf.vals.service==='unsure'?'on':''}" data-lf="pick" data-k="service" data-v="unsure"><span class="t">Not sure yet</span><span class="s">We'll recommend one after a quick look at your car.</span></button>`;
     else ctl=lfInput(k);
-    body=`<h4>${LF_Q[k]}${L.fields[k].req?'':' <span style="font-weight:400;color:#61739a;font-size:13px">(optional)</span>'}</h4>${ctl}${last?consent:''}`;
+    body=`<h4>${esc(it.q)}${it.req?'':' <span style="font-weight:400;color:#61739a;font-size:13px">(optional)</span>'}</h4>${ctl}${last?consent:''}`;
     top=`<div class="bk-steps">${order.map((_,j)=>`<i class="${j<=i?'on':''}"></i>`).join('')}</div>`;
     foot=`<div class="bk-foot">${i>0?'<button class="bk-back" data-lf="back">Back</button>':''}<div class="tot">Question ${i+1} of ${order.length}</div><button class="bk-btn" data-lf="${last?'submit':'next'}">${last?esc(L.button):'Continue'}</button></div>`;
   }
@@ -2200,25 +2214,72 @@ function drawLeadForm(){
   if(UI.lf.focus){UI.lf.focus=false;const f=el.querySelector('.bk-body input,.bk-body textarea,.bk-body select');if(f)f.focus()}
 }
 function lfAction(b){
-  const a=b.dataset.lf,L=S.leadForm,order=LF_STEP_ORDER.filter(k=>L.fields[k].on),k=order[Math.min(UI.lf.step,order.length-1)];
+  const a=b.dataset.lf,L=S.leadForm,order=qItems('lf').filter(x=>x.on),cur=order[Math.min(UI.lf.step,order.length-1)],k=cur.k;
   const empty=x=>!String(UI.lf.vals[x]||'').trim();
   if(a==='again'){UI.lfDone=false;UI.lf={step:0,vals:{},focus:false};drawLeadForm();return}
   if(a==='pick'){UI.lf.vals[b.dataset.k]=b.dataset.v;if(UI.lf.step<order.length-1)UI.lf.step++;UI.lf.focus=true;drawLeadForm();return}
   if(a==='back'){UI.lf.step=Math.max(0,UI.lf.step-1);UI.lf.focus=true;drawLeadForm();return}
-  if(L.layout==='steps'&&L.fields[k].req&&empty(k)){toast('Please answer this one to continue');return}
+  if(L.layout==='steps'&&cur.req&&empty(k)){toast('Please answer this one to continue');return}
   if(a==='next'){UI.lf.step++;UI.lf.focus=true;drawLeadForm();return}
   if(a==='submit')submitLeadForm();
 }
 function submitLeadForm(){
   const L=S.leadForm,val=k=>String(UI.lf.vals[k]||'').trim();
-  const miss=LF_FIELDS.filter(([k])=>L.fields[k].on&&L.fields[k].req&&!val(k));
-  if(miss.length){toast('Please fill in: '+miss.map(([,n])=>n).join(', '));if(L.layout==='steps'){UI.lf.step=LF_STEP_ORDER.filter(k=>L.fields[k].on).indexOf(miss[0][0]);UI.lf.focus=true;drawLeadForm()}return}
+  const items=qItems('lf').filter(x=>x.on),miss=items.filter(x=>x.req&&!val(x.k));
+  if(miss.length){toast('Please answer: '+miss.map(x=>x.q).join(', '));if(L.layout==='steps'){UI.lf.step=items.indexOf(miss[0]);UI.lf.focus=true;drawLeadForm()}return}
+  const answers=items.filter(x=>(!x.builtin||x.k==='message'||x.k==='email'||x.k==='date')&&val(x.k)).map(x=>({q:x.q,a:val(x.k)}));
   const pc=val('postal').toUpperCase();
   const loc=L.loc!=='auto'?L.loc:/^V[567]/.test(pc)?'van':'vic';
   const size=val('size')||'suv',sv=val('service')==='unsure'?'':val('service');
-  S.leads.push({id:'l'+Date.now(),name:val('name'),phone:val('phone'),loc,source:'website',vehicle:val('vehicle')||'Vehicle',size,svc:sv||'confidence',value:sv&&svc(sv)?svc(sv).price[size]:0,stage:'new',created:TODAYS,log:[]});
+  S.leads.push({id:'l'+Date.now(),name:val('name'),phone:val('phone'),loc,source:'website',vehicle:val('vehicle')||'Vehicle',size,svc:sv||'confidence',value:sv&&svc(sv)?svc(sv).price[size]:0,stage:'new',created:TODAYS,log:[],answers});
   save();UI.lfDone=true;UI.lf={step:0,vals:{},focus:false};drawLeadForm();toast(`New lead in Pipeline: ${val('name')||'website visitor'} (${LOCS[loc].name})`);
 }
+/* ---------- editable questions (lead form + booking page) ---------- */
+const LF_SAVE={name:'Name',phone:'Phone',email:'Email',vehicle:'Vehicle',size:'Vehicle size',service:'Service',postal:'Postal code (picks the location)',date:'Preferred date',message:'Lead notes'};
+const BK_Q_DEFAULT={loc:'Where\'s the car?',size:'What are we cleaning?',svc:'Pick your detail',extras:'Anything extra?',time:'When works?',details:'Last step'};
+const BK_STEPS=[['loc','Step 1 · Location'],['size','Step 2 · Vehicle size'],['svc','Step 3 · Service'],['extras','Step 4 · Add-ons'],['time','Step 5 · Date and time'],['details','Step 6 · Contact details']];
+function ensureQuestions(){
+  const L=S.leadForm;
+  if(!L.q)L.q={...LF_Q};
+  if(!L.custom)L.custom=[{id:'qpets',q:'Do any pets ride in the car?',type:'choice',options:['Yes, there\'s pet hair','No pets'],on:1,req:0}];
+  if(!L.order){L.order=LF_STEP_ORDER.slice();const ix=L.order.indexOf('name');L.order.splice(ix,0,...L.custom.map(c=>c.id))}
+  const B=S.brand;
+  if(!B.bkQ)B.bkQ={...BK_Q_DEFAULT};
+  if(!B.bkCustom)B.bkCustom=[{id:'bpets',q:'Do any pets ride in the car?',type:'choice',options:['Yes, there\'s pet hair','No pets'],on:1,req:0}];
+}
+function qItems(scope){
+  if(scope==='lf'){const L=S.leadForm;return L.order.map(k=>{if(k in LF_Q)return{k,builtin:true,q:L.q[k]??LF_Q[k],on:!!L.fields[k].on,req:!!L.fields[k].req,lock:k==='name'||k==='phone'};const c=L.custom.find(x=>x.id===k);return c?{k,builtin:false,...c}:null}).filter(Boolean)}
+  return S.brand.bkCustom.map(c=>({k:c.id,builtin:false,...c}));
+}
+function qSet(scope,k,field,val){
+  if(scope==='lf'){const L=S.leadForm;if(k in LF_Q){if(field==='q')L.q[k]=val}else{const c=L.custom.find(x=>x.id===k);if(c)c[field]=val}}
+  else{const c=S.brand.bkCustom.find(x=>x.id===k);if(c)c[field]=val}
+  save();if(scope==='lf')drawLeadForm();else{drawBk();drawShop()}
+}
+function qInput(prefix,it,val){const id=prefix+it.k;return it.type==='choice'?`<select id="${id}"><option value="">Choose…</option>${(it.options||[]).map(o=>`<option ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input id="${id}" value="${esc(val||'')}">`}
+function qCustomFields(prefix,answers){return qItems('bk').filter(it=>it.on).map(it=>`<label class="lfl"><span>${esc(it.q)}${it.req?' <em>*</em>':''}</span>${qInput(prefix,it,answers[it.k])}</label>`).join('')}
+function qMissing(answers){return qItems('bk').filter(it=>it.on&&it.req&&!String(answers[it.k]||'').trim()).map(it=>it.q)}
+function qAnswerNotes(answers){return qItems('bk').filter(it=>it.on&&String(answers[it.k]||'').trim()).map(it=>`${it.q} ${answers[it.k]}`).join('\n')}
+function qPanel(scope){
+  const B=S.brand,items=qItems(scope),shop=B.style==='shop';
+  const rows=items.map((it,i)=>`<div class="qrow">
+    <span class="qn">${i+1}</span>
+    <div class="qmain"><input class="in qtext" data-qs="${scope}" data-qtext="${it.k}" value="${esc(it.q)}" aria-label="Question ${i+1} wording">
+     <div class="qmeta">${it.builtin?`<span class="muted">Saves to: ${LF_SAVE[it.k]}</span>`:`<select class="in" data-qs="${scope}" data-qtype="${it.k}" aria-label="Answer type"><option value="text" ${it.type!=='choice'?'selected':''}>Short answer</option><option value="choice" ${it.type==='choice'?'selected':''}>Multiple choice</option></select>${it.type==='choice'?`<input class="in" data-qs="${scope}" data-qopts="${it.k}" value="${esc((it.options||[]).join(', '))}" placeholder="Choices, separated by commas" aria-label="Choices">`:''}`}
+      <label class="toggle"><input type="checkbox" data-qs="${scope}" data-qon="${it.k}" ${it.on?'checked':''} ${it.lock?'disabled':''}>Ask</label>
+      <label class="toggle"><input type="checkbox" data-qs="${scope}" data-qreq="${it.k}" ${it.req?'checked':''} ${it.lock||!it.on?'disabled':''}>Required</label>
+      ${it.lock?'<span class="muted">Always asked</span>':''}</div></div>
+    <div class="qbtns">${scope==='lf'||items.length>1?`<button class="btn ghost sm" data-act="qmove" data-qs="${scope}" data-k="${it.k}" data-d="-1" ${i===0?'disabled':''} aria-label="Move up">↑</button><button class="btn ghost sm" data-act="qmove" data-qs="${scope}" data-k="${it.k}" data-d="1" ${i===items.length-1?'disabled':''} aria-label="Move down">↓</button>`:''}${it.builtin?'':`<button class="btn ghost sm danger" data-act="qdel" data-qs="${scope}" data-k="${it.k}" aria-label="Delete question">✕</button>`}</div>
+   </div>`).join('');
+  const steps=scope==='bk'&&!shop?`<div class="qsteps">${BK_STEPS.map(([k,l])=>`<div class="field"><label for="bkt-${k}">${l}</label><input class="in qtext" id="bkt-${k}" data-bkq="${k}" value="${esc(B.bkQ[k])}"></div>`).join('')}
+     <label class="toggle"><input type="checkbox" id="bk-extras" data-bkextras="1" ${B.bkExtras!==false?'checked':''}>Ask about add-ons (step 4)</label></div>
+     <div class="eyebrow" style="margin-top:6px">Your own questions · asked on the last step</div>`:scope==='bk'?'<div class="eyebrow">Your own questions · asked at checkout</div>':'';
+  return `<div class="panel qpanel"><div class="panel-h"><h3>✎ Questions</h3><span class="muted" style="font-size:12px">Click any question to change the wording</span></div>
+   <div class="panel-b" style="display:grid;gap:10px">${steps}${rows||'<p class="muted" style="margin:0">No questions of your own yet.</p>'}
+    <div><button class="btn" data-act="qadd" data-qs="${scope}">+ Add a question</button></div>
+    <p class="muted" style="margin:0;font-size:12.5px">${scope==='lf'?'Name and mobile number are always asked. Answers to your own questions are saved on the lead in the Pipeline.':'Answers are saved in the job notes, so the tech sees them.'}</p></div></div>`;
+}
+
 /* shop-style booking */
 const cartCount=()=>{const c=UI.shop.cart;return (c.svc?1:0)+c.addons.length+c.gifts.length+c.products.length};
 const catSvcs=c=>S.services.filter(x=>x.book&&x.cat===c.id);
@@ -2253,7 +2314,7 @@ function shopBody(){
      ${when}
      <div class="sh-title"><h4>Your details</h4></div>
      <input id="sh-name" placeholder="Full name" value="${esc(sh.name||'')}"><input id="sh-phone" placeholder="Mobile number" value="${esc(sh.phone||'')}">
-     ${needTime?`<input id="sh-veh" placeholder="Vehicle (e.g. 2021 Toyota RAV4)" value="${esc(sh.veh||'')}"><input id="sh-addr" placeholder="Address where the car will be" value="${esc(sh.addr||'')}">`:''}
+     ${needTime?`<input id="sh-veh" placeholder="Vehicle (e.g. 2021 Toyota RAV4)" value="${esc(sh.veh||'')}"><input id="sh-addr" placeholder="Address where the car will be" value="${esc(sh.addr||'')}">${qCustomFields('sha-',sh.ans||{})}`:''}
      <button class="sh-btn" data-sh="checkout" style="padding:12px" ${(needTime&&!(sh.date&&sh.time!=null))||(!needTime&&c.addons.length)?'disabled':''}>${needTime?'Book now · pay when it\'s done':c.products.length?'Place order':'Buy gift card'}</button>`;
   }
   return `<div class="sh-title"><h4>Shop by category</h4><p>Choose a category to see what we offer.</p></div>
@@ -2286,11 +2347,12 @@ function shopAction(a,v,el){
   else if(a==='time')sh.time=+v;
   else if(a==='checkout'){
     if(!sh.name||!sh.phone){toast('Add your name and mobile number');return}
+    if(c.svc){const m=qMissing(sh.ans||{});if(m.length){toast('Please answer: '+m.join(', '));return}}
     if(c.svc){
       const cu={id:'c'+Date.now(),loc:sh.loc,source:'booking',size:sh.size,vehicle:sh.veh||SIZES[sh.size].name,first:sh.date,name:sh.name,phone:sh.phone,address:sh.addr||'—'};
       S.customers.push(cu);
       const techs=EMP.filter(e=>e.loc===sh.loc&&e.wage).map(e=>({e,n:S.jobs.filter(j=>j.date===sh.date&&j.emp===e.id).length})).sort((x,y)=>x.n-y.n);
-      const j={id:nextJobId(),date:sh.date,start:sh.time,loc:sh.loc,cust:cu.id,emp:techs[0].e.id,svc:c.svc,size:sh.size,price:svc(c.svc).price[sh.size],addons:c.addons.slice(),status:'scheduled',tip:0,checks:{},notes:'Booked through the online shop'+(c.gifts.length?` · bought ${c.gifts.length} gift card(s)`:'')+(c.products.length?' · bring: '+c.products.map(id=>prod(id).name).join(', '):'')};
+      const j={id:nextJobId(),date:sh.date,start:sh.time,loc:sh.loc,cust:cu.id,emp:techs[0].e.id,svc:c.svc,size:sh.size,price:svc(c.svc).price[sh.size],addons:c.addons.slice(),status:'scheduled',tip:0,checks:{},notes:'Booked through the online shop'+(qAnswerNotes(sh.ans||{})?'\n'+qAnswerNotes(sh.ans||{}):'')+(c.gifts.length?` · bought ${c.gifts.length} gift card(s)`:'')+(c.products.length?' · bring: '+c.products.map(id=>prod(id).name).join(', '):'')};
       S.jobs.push(j);
       S.leads.push({id:'l'+Date.now(),name:cu.name,phone:cu.phone,loc:cu.loc,source:'booking',vehicle:cu.vehicle,value:sub(j),stage:'won',created:TODAYS,cust:cu.id,log:[]});
       sh.doneMsg=`You're booked for ${fmtDate(parse(j.date))} at ${fmtTime(j.start)}. We'll text a reminder the day before.`;
@@ -2303,7 +2365,7 @@ function shopAction(a,v,el){
 function drawBk(){
   const b=UI.bk,el=$('#bk');if(!el)return;
   if(!b.loc&&UI.loc!=='all')b.loc=UI.loc;
-  const steps=['Location','Vehicle','Service','Extras','Time','Details'];
+  const noX=S.brand.bkExtras===false,steps=noX?['Location','Vehicle','Service','Time','Details']:['Location','Vehicle','Service','Extras','Time','Details'],vst=noX&&b.step>3?b.step-1:b.step;
   const sv=b.svc&&svc(b.svc);
   const total=sv?sv.price[b.size]+(b.addons||[]).reduce((a,id)=>a+ADDONS.find(x=>x.id===id).price,0):0;
   let body='',can=false;
@@ -2312,48 +2374,50 @@ function drawBk(){
     body=`<div class="done"><div class="ok">✓</div><h4>You're booked, ${esc(b.name.split(' ')[0])}!</h4><p style="margin:0;color:#61739a;font-size:13px">${esc(sv.name)} · ${fmtDate(parse(b.date))} at ${fmtTime(b.time)}<br>We'll text a reminder the day before. Leave the car unlocked with water and power within 50 ft.</p>
      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center"><button class="bk-btn" data-bk="restart">Book another</button><a class="btn" href="#calendar" data-bk="seecal">See job ${b.jobId} on calendar</a></div></div>`;
   }else if(st===0){
-    body=`<h4>Where's the car?</h4>${Object.entries(LOCS).map(([k,v])=>`<button class="opt ${b.loc===k?'on':''}" data-bk="loc" data-v="${k}"><span class="t">${v.name}</span><span class="s">${k==='vic'?'Greater Victoria, Saanich, Langford, Mill Bay':'Vancouver, North Shore, Burnaby'}</span></button>`).join('')}`;can=!!b.loc;
+    body=`<h4>${esc(S.brand.bkQ.loc)}</h4>${Object.entries(LOCS).map(([k,v])=>`<button class="opt ${b.loc===k?'on':''}" data-bk="loc" data-v="${k}"><span class="t">${v.name}</span><span class="s">${k==='vic'?'Greater Victoria, Saanich, Langford, Mill Bay':'Vancouver, North Shore, Burnaby'}</span></button>`).join('')}`;can=!!b.loc;
   }else if(st===1){
-    body=`<h4>What are we cleaning?</h4><div class="opts3">${Object.entries(SIZES).map(([k,v])=>`<button class="opt ${b.size===k?'on':''}" data-bk="size" data-v="${k}"><span class="t">${v.name}</span><span class="s">${v.eg}</span></button>`).join('')}</div>`;can=!!b.size;
+    body=`<h4>${esc(S.brand.bkQ.size)}</h4><div class="opts3">${Object.entries(SIZES).map(([k,v])=>`<button class="opt ${b.size===k?'on':''}" data-bk="size" data-v="${k}"><span class="t">${v.name}</span><span class="s">${v.eg}</span></button>`).join('')}</div>`;can=!!b.size;
   }else if(st===2){
-    body=`<h4>Pick your detail</h4>${S.services.filter(s=>s.book).map(s=>`<button class="opt ${b.svc===s.id?'on':''}" data-bk="svc" data-v="${s.id}">${s.img?`<img class="opt-img" src="${s.img}" alt="">`:''}<span class="t"><span>${esc(s.name)} ${s.popular?'<span class="badge">Most booked</span>':''}</span><span class="num">${money(s.price[b.size])}</span></span><span class="s">${esc(s.blurb)} · about ${hrs(s.dur+(b.size==='suv'?.5:b.size==='large'?1:0))}</span><ul>${s.inc.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></button>`).join('')}
+    body=`<h4>${esc(S.brand.bkQ.svc)}</h4>${S.services.filter(s=>s.book).map(s=>`<button class="opt ${b.svc===s.id?'on':''}" data-bk="svc" data-v="${s.id}">${s.img?`<img class="opt-img" src="${s.img}" alt="">`:''}<span class="t"><span>${esc(s.name)} ${s.popular?'<span class="badge">Most booked</span>':''}</span><span class="num">${money(s.price[b.size])}</span></span><span class="s">${esc(s.blurb)} · about ${hrs(s.dur+(b.size==='suv'?.5:b.size==='large'?1:0))}</span><ul>${s.inc.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></button>`).join('')}
       <p style="margin:0;font-size:12px;color:#61739a">Pet-safe, chemical-free products. Dog hair removal always included.</p>`;can=!!b.svc;
   }else if(st===3){
-    body=`<h4>Anything extra?</h4>${ADDONS.filter(a=>!(b.svc==='luxury'&&['shampoo','odor','clay'].includes(a.id))).map(a=>{const on=(b.addons||[]).includes(a.id);return `<button class="opt ${on?'on':''}" data-bk="addon" data-v="${a.id}"><span class="t"><span>${on?'✓ ':''}${a.name}</span><span class="num">+${money(a.price)}</span></span></button>`}).join('')}`;can=true;
+    body=`<h4>${esc(S.brand.bkQ.extras)}</h4>${ADDONS.filter(a=>!(b.svc==='luxury'&&['shampoo','odor','clay'].includes(a.id))).map(a=>{const on=(b.addons||[]).includes(a.id);return `<button class="opt ${on?'on':''}" data-bk="addon" data-v="${a.id}"><span class="t"><span>${on?'✓ ':''}${a.name}</span><span class="num">+${money(a.price)}</span></span></button>`}).join('')}`;can=true;
   }else if(st===4){
     const days=[];for(let i=1;i<=14;i++)days.push(addDays(TODAY,i));
     const sl=b.date?slotsFor(b.date,b.loc):[];
-    body=`<h4>When works?</h4><div class="days">${days.map(d=>{const ds=ymd(d),open=slotsFor(ds,b.loc).some(s=>s.left>0)&&d.getDay()!==0;return `<button data-bk="date" data-v="${ds}" class="${b.date===ds?'on':''}" ${open?'':'disabled'}>${DOW[d.getDay()]}<b>${d.getDate()}</b>${MONTHS[d.getMonth()].slice(0,3)}</button>`}).join('')}</div>
+    body=`<h4>${esc(S.brand.bkQ.time)}</h4><div class="days">${days.map(d=>{const ds=ymd(d),open=slotsFor(ds,b.loc).some(s=>s.left>0)&&d.getDay()!==0;return `<button data-bk="date" data-v="${ds}" class="${b.date===ds?'on':''}" ${open?'':'disabled'}>${DOW[d.getDay()]}<b>${d.getDate()}</b>${MONTHS[d.getMonth()].slice(0,3)}</button>`}).join('')}</div>
       ${b.date?`<div class="times">${sl.map(s=>`<button data-bk="time" data-v="${s.t}" class="${b.time===s.t?'on':''}" ${s.left>0?'':'disabled'}>${fmtTime(s.t)}</button>`).join('')}</div>`:'<p style="margin:0;font-size:12.5px;color:#61739a">Greyed-out days are fully booked.</p>'}`;can=!!(b.date&&b.time!=null);
   }else if(st===5){
-    body=`<h4>Last step</h4><input id="bk-name" placeholder="Full name" value="${esc(b.name||'')}" autocomplete="name"><input id="bk-veh" placeholder="Vehicle (e.g. 2021 Toyota RAV4)" value="${esc(b.veh||'')}"><input id="bk-phone" placeholder="Mobile number" value="${esc(b.phone||'')}" autocomplete="tel"><input id="bk-addr" placeholder="Address where the car will be" value="${esc(b.addr||'')}" autocomplete="street-address">
+    body=`<h4>${esc(S.brand.bkQ.details)}</h4><input id="bk-name" placeholder="Full name" value="${esc(b.name||'')}" autocomplete="name"><input id="bk-veh" placeholder="Vehicle (e.g. 2021 Toyota RAV4)" value="${esc(b.veh||'')}"><input id="bk-phone" placeholder="Mobile number" value="${esc(b.phone||'')}" autocomplete="tel"><input id="bk-addr" placeholder="Address where the car will be" value="${esc(b.addr||'')}" autocomplete="street-address">
+      ${qCustomFields('bka-',b.ans||{})}
       <p style="margin:0;font-size:12px;color:#61739a">No card needed now. You'll get a payment link by text when we're done.</p>`;can=true;
   }
   el.setAttribute('style',brandVars());
   el.innerHTML=`<div class="bk-top"><div class="biz">${brandBadge()}${esc(S.brand.name)}</div><h3>${esc(S.brand.headline)}</h3><p>${esc(S.brand.tagline)}</p>
-    ${b.done?'':`<div class="bk-steps">${steps.map((_,i)=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>`}</div>
+    ${b.done?'':`<div class="bk-steps">${steps.map((_,i)=>`<i class="${i<=vst?'on':''}"></i>`).join('')}</div>`}</div>
    <div class="bk-body">${body}</div>
-   ${b.done?'':`<div class="bk-foot">${st>0?`<button class="bk-back" data-bk="back">Back</button>`:''}<div class="tot">${sv?`${esc(sv.name)}${(b.addons||[]).length?' + '+b.addons.length+' extra':''}<b>${money(total)}</b>`:`Step ${st+1} of ${steps.length}`}</div>
+   ${b.done?'':`<div class="bk-foot">${st>0?`<button class="bk-back" data-bk="back">Back</button>`:''}<div class="tot">${sv?`${esc(sv.name)}${(b.addons||[]).length?' + '+b.addons.length+' extra':''}<b>${money(total)}</b>`:`Step ${vst+1} of ${steps.length}`}</div>
      <button class="bk-btn" data-bk="${st===5?'confirm':'next'}" ${can?'':'disabled'}>${st===5?'Confirm booking':'Continue'}</button></div>`}`;
 }
 function bkAction(a,v){
   const b=UI.bk;
   if(a==='loc'){b.loc=v;b.step=1}
   else if(a==='size'){b.size=v;b.step=2}
-  else if(a==='svc'){b.svc=v;b.addons=[];b.step=3}
+  else if(a==='svc'){b.svc=v;b.addons=[];b.step=S.brand.bkExtras===false?4:3}
   else if(a==='addon'){b.addons=b.addons||[];b.addons=b.addons.includes(v)?b.addons.filter(x=>x!==v):b.addons.concat(v)}
   else if(a==='date'){b.date=v;b.time=null}
   else if(a==='time'){b.time=+v}
   else if(a==='next')b.step++;
-  else if(a==='back')b.step--;
+  else if(a==='back'){b.step--;if(b.step===3&&S.brand.bkExtras===false)b.step=2}
   else if(a==='restart'){UI.bk={step:0}}
   else if(a==='confirm'){
     b.name=$('#bk-name').value.trim();b.phone=$('#bk-phone').value.trim();b.addr=$('#bk-addr').value.trim();b.veh=$('#bk-veh').value.trim();
     if(!b.name||!b.phone){toast('Add your name and mobile number to confirm');return}
+    {const m=qMissing(b.ans||{});if(m.length){toast('Please answer: '+m.join(', '));return}}
     const c={id:'c'+Date.now(),loc:b.loc,source:'booking',size:b.size,vehicle:b.veh||SIZES[b.size].name,first:b.date,name:b.name,phone:b.phone,address:b.addr||'—'};
     S.customers.push(c);
     const techs=EMP.filter(e=>e.loc===b.loc&&e.wage).map(e=>({e,n:S.jobs.filter(j=>j.date===b.date&&j.emp===e.id).length})).sort((x,y)=>x.n-y.n);
-    const j={id:nextJobId(),date:b.date,start:b.time,loc:b.loc,cust:c.id,emp:techs[0].e.id,svc:b.svc,size:b.size,price:svc(b.svc).price[b.size],addons:b.addons||[],status:'scheduled',tip:0,checks:{},notes:'Booked online'};
+    const j={id:nextJobId(),date:b.date,start:b.time,loc:b.loc,cust:c.id,emp:techs[0].e.id,svc:b.svc,size:b.size,price:svc(b.svc).price[b.size],addons:b.addons||[],status:'scheduled',tip:0,checks:{},notes:['Booked online',qAnswerNotes(b.ans||{})].filter(Boolean).join('\n')};
     S.jobs.push(j);
     S.leads.push({id:'l'+Date.now(),name:c.name,phone:c.phone,loc:c.loc,source:'booking',vehicle:c.vehicle,value:sub(j),stage:'won',created:TODAYS,cust:c.id,log:[]});
     save();b.done=true;b.jobId=j.id;toast(`New booking: job ${j.id} on ${fmtDate(parse(j.date))}, assigned to ${techs[0].e.name}`);
@@ -2436,6 +2500,9 @@ document.addEventListener('click',ev=>{
     case 'ltext':UI.pipeSel=new Set([id]);openBulk();break;
     case 'selmode':UI.selMode=!UI.selMode;if(!UI.selMode)UI.pipeSel.clear();render();break;
     case 'cust':openCustomer(id);break;
+    case 'qadd':{const sc=t.dataset.qs,q={id:'q'+Date.now(),q:'New question',type:'text',options:[],on:1,req:0};if(sc==='lf'){const L=S.leadForm;L.custom.push(q);const ix=L.order.indexOf('name');L.order.splice(ix<0?L.order.length:ix,0,q.id)}else S.brand.bkCustom.push(q);save();render();setTimeout(()=>{const el=document.querySelector(`[data-qtext="${q.id}"]`);if(el){el.focus();el.select()}},0);break}
+    case 'qmove':{const sc=t.dataset.qs,k=t.dataset.k,d=+t.dataset.d,arr=sc==='lf'?S.leadForm.order:S.brand.bkCustom,i=sc==='lf'?arr.indexOf(k):arr.findIndex(x=>x.id===k),j=i+d;if(i<0||j<0||j>=arr.length)break;[arr[i],arr[j]]=[arr[j],arr[i]];UI.lf.step=0;save();render();break}
+    case 'qdel':{const sc=t.dataset.qs,k=t.dataset.k;if(sc==='lf'){S.leadForm.custom=S.leadForm.custom.filter(x=>x.id!==k);S.leadForm.order=S.leadForm.order.filter(x=>x!==k)}else S.brand.bkCustom=S.brand.bkCustom.filter(x=>x.id!==k);UI.lf.step=0;save();render();toast('Question removed');break}
     case 'calmove':{const m=UI.calMove;if(!m)break;const j=job(m.id),c=cust(j.cust);j.date=m.to;const n=t.dataset.n==='1';if(n)(c.log=c.log||[]).push({at:Date.now(),txt:m.msg});UI.calMove=null;save();closeLayer();render();toast(n?`Moved to ${fmtDate(parse(m.to))}. Text to ${c.name.split(' ')[0]} queued.`:`Moved to ${fmtDate(parse(m.to))}.`);break}
     case 'ivpdf':{if(!window.jspdf){toast('The PDF tool did not load. Check your internet connection and reload.');break}const d=UI.iv.d;let blob;try{blob=invoicePdf(d)}catch(e){toast('Could not build the PDF');break}saveFile(`${d.num} - ${(d.bill.name||'Customer').replace(/[\\/:*?"<>|]/g,'')}.pdf`,blob);break}
     case 'ivcsv':{const tab=UI.ivTab||'all',q=(UI.ivQ||'').toLowerCase();const rows=S.invoices.filter(i=>inLoc(i)&&(tab==='all'||invStat(i)===tab)&&(!q||(i.num+' '+i.bill.name+' '+i.bill.phone).toLowerCase().includes(q))).sort((a,b)=>a.num.localeCompare(b.num,undefined,{numeric:true}));
@@ -2537,6 +2604,11 @@ document.addEventListener('input',ev=>{
     if(f.startsWith('price.'))d.price[f.slice(6)]=+t.value;else if(f==='price'||f==='dur')d[f]=+t.value;
     else if(['inc','exc','sop'].includes(f))d[f]=t.value.split('\n').map(x=>x.trim()).filter(Boolean);else d[f]=t.value;
     drawEdPreview();return}
+  if(t.dataset.qtext){qSet(t.dataset.qs,t.dataset.qtext,'q',t.value);return}
+  if(t.dataset.qopts){qSet(t.dataset.qs,t.dataset.qopts,'options',t.value.split(',').map(x=>x.trim()).filter(Boolean));return}
+  if(t.dataset.bkq){S.brand.bkQ[t.dataset.bkq]=t.value;save();drawBk();return}
+  if(/^bka-/.test(t.id)){(UI.bk.ans=UI.bk.ans||{})[t.id.slice(4)]=t.value;return}
+  if(/^sha-/.test(t.id)){(UI.shop.ans=UI.shop.ans||{})[t.id.slice(4)]=t.value;return}
   if(/^lf-/.test(t.id)&&!t.dataset.lfc&&!t.dataset.lff){UI.lf.vals[t.id.slice(3)]=t.value;return}
   if(t.id==='sh-q'){UI.shop.q=t.value;const b=$('#shop .sh-body');if(b)b.innerHTML=shopBody();return}
   if(/^sh-(name|phone|veh|addr)$/.test(t.id)){UI.shop[t.id.slice(3)]=t.value;return}
@@ -2557,6 +2629,12 @@ document.addEventListener('change',ev=>{
    if(t.dataset.fbopt&&UI.fbw){UI.fbw[t.dataset.fbopt]=t.checked;return}
    if(t.id==='uc-month'){const [y,m]=t.value.split('-').map(Number);UI.month=new Date(y,m-1,1);UI.calDay=mkey(UI.month)===mkey(TODAY)?TODAYS:ymd(UI.month);render();return}
    if(t.id==='uc-emp'){UI.calEmp=t.value;render();return}
+   if(t.dataset.qtype){qSet(t.dataset.qs,t.dataset.qtype,'type',t.value);render();return}
+   if(t.dataset.qon||t.dataset.qreq){const sc=t.dataset.qs,k=t.dataset.qon||t.dataset.qreq,f=t.dataset.qon?'on':'req',v=t.checked?1:0;
+     if(sc==='lf'&&k in LF_Q){const F=S.leadForm.fields[k];F[f]=v;if(f==='on'&&!v)F.req=0}
+     else{const c=(sc==='lf'?S.leadForm.custom:S.brand.bkCustom).find(x=>x.id===k);if(c){c[f]=v;if(f==='on'&&!v)c.req=0}}
+     UI.lf.step=0;save();render();return}
+   if(t.dataset.bkextras){S.brand.bkExtras=t.checked;UI.bk={step:0};save();render();return}
    if(t.id==='ed-img'){readImage(t.files[0],900,u=>{UI.edit.d.img=u;drawEditor()});return}
    if(t.dataset.edt&&UI.edit){UI.edit.d[t.dataset.edt]=t.checked;drawEdPreview();return}
    if(t.id==='gift-amts'){const v=t.value.split(/[,\s]+/).map(Number).filter(x=>x>0);if(v.length){S.giftAmounts=v;save();toast('Gift card amounts updated')}return}
