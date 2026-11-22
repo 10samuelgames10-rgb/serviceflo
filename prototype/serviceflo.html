@@ -340,6 +340,7 @@ label.fb-row{grid-template-columns:auto auto minmax(0,1fr)}
 .qbtns{display:flex;flex-direction:column;gap:2px}
 .qbtns .btn{padding:2px 8px}
 .qsteps{display:grid;gap:8px}
+.alert-soft{background:#fff6e0;border:1px solid #f3dca0;color:#7a5200;border-radius:10px;padding:8px 12px;font-size:13px}
 .qhint{background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:10px}
 /* calendar extras */
 .uc-row1{padding-bottom:16px}
@@ -2231,7 +2232,7 @@ function submitLeadForm(){
   const pc=val('postal').toUpperCase();
   const loc=L.loc!=='auto'?L.loc:/^V[567]/.test(pc)?'van':'vic';
   const size=val('size')||'suv',sv=val('service')==='unsure'?'':val('service');
-  S.leads.push({id:'l'+Date.now(),name:val('name'),phone:val('phone'),loc,source:'website',vehicle:val('vehicle')||'Vehicle',size,svc:sv||'confidence',value:sv&&svc(sv)?svc(sv).price[size]:0,stage:'new',created:TODAYS,log:[],answers});
+  S.leads.push({id:'l'+Date.now(),name:val('name')||'Website lead',phone:val('phone')||'—',loc,source:'website',vehicle:val('vehicle')||'Vehicle',size,svc:sv||'confidence',value:sv&&svc(sv)?svc(sv).price[size]:0,stage:'new',created:TODAYS,log:[],answers});
   save();UI.lfDone=true;UI.lf={step:0,vals:{},focus:false};drawLeadForm();toast(`New lead in Pipeline: ${val('name')||'website visitor'} (${LOCS[loc].name})`);
 }
 /* ---------- editable questions (lead form + booking page) ---------- */
@@ -2246,38 +2247,52 @@ function ensureQuestions(){
   const B=S.brand;
   if(!B.bkQ)B.bkQ={...BK_Q_DEFAULT};
   if(!B.bkCustom)B.bkCustom=[{id:'bpets',q:'Do any pets ride in the car?',type:'choice',options:['Yes, there\'s pet hair','No pets'],on:1,req:0}];
+  if(!B.bkB)B.bkB={bname:{q:'Full name',on:1,req:1},bveh:{q:'Vehicle (year, make, model)',on:1,req:0},bphone:{q:'Mobile number',on:1,req:1},baddr:{q:'Address where the car will be',on:1,req:0}};
+  if(!B.bkOrder)B.bkOrder=['bname','bveh','bphone','baddr',...B.bkCustom.map(c=>c.id)];
+}
+const BK_SAVE={bname:'Customer name',bveh:'Vehicle',bphone:'Phone',baddr:'Address'};
+const BK_IDS={bname:'name',bveh:'veh',bphone:'phone',baddr:'addr'};
+function bkFields(mode,needTime){
+  const st=mode==='bk'?UI.bk:UI.shop,pre=mode==='bk'?'bk-':'sh-',apre=mode==='bk'?'bka-':'sha-',ans=st.ans||{};
+  const ac={bname:'autocomplete="name"',bphone:'autocomplete="tel" inputmode="tel"',baddr:'autocomplete="street-address"',bveh:''};
+  return qItems('bk').filter(it=>it.on&&(needTime||it.k==='bname'||it.k==='bphone')).map(it=>`<label class="lfl"><span>${esc(it.q)}${it.req?' <em>*</em>':''}</span>${it.builtin?`<input id="${pre}${BK_IDS[it.k]}" value="${esc(st[BK_IDS[it.k]]||'')}" ${ac[it.k]}>`:qInput(apre,it,ans[it.k])}</label>`).join('');
+}
+function bkMissing(mode,needTime){
+  const st=mode==='bk'?UI.bk:UI.shop,ans=st.ans||{};
+  return qItems('bk').filter(it=>it.on&&it.req&&(needTime||it.k==='bname'||it.k==='bphone')&&!String((it.builtin?st[BK_IDS[it.k]]:ans[it.k])||'').trim()).map(it=>it.q);
 }
 function qItems(scope){
-  if(scope==='lf'){const L=S.leadForm;return L.order.map(k=>{if(k in LF_Q)return{k,builtin:true,q:L.q[k]??LF_Q[k],on:!!L.fields[k].on,req:!!L.fields[k].req,lock:k==='name'||k==='phone'};const c=L.custom.find(x=>x.id===k);return c?{k,builtin:false,...c}:null}).filter(Boolean)}
-  return S.brand.bkCustom.map(c=>({k:c.id,builtin:false,...c}));
+  if(scope==='lf'){const L=S.leadForm;return L.order.map(k=>{if(k in LF_Q)return{k,builtin:true,q:L.q[k]??LF_Q[k],on:!!L.fields[k].on,req:!!L.fields[k].req};const c=L.custom.find(x=>x.id===k);return c?{k,builtin:false,...c}:null}).filter(Boolean)}
+  const B=S.brand;return B.bkOrder.map(k=>{if(B.bkB[k])return{k,builtin:true,...B.bkB[k]};const c=B.bkCustom.find(x=>x.id===k);return c?{k,builtin:false,...c}:null}).filter(Boolean);
 }
 function qSet(scope,k,field,val){
   if(scope==='lf'){const L=S.leadForm;if(k in LF_Q){if(field==='q')L.q[k]=val}else{const c=L.custom.find(x=>x.id===k);if(c)c[field]=val}}
-  else{const c=S.brand.bkCustom.find(x=>x.id===k);if(c)c[field]=val}
+  else{const o=S.brand.bkB[k]||S.brand.bkCustom.find(x=>x.id===k);if(o)o[field]=val}
   save();if(scope==='lf')drawLeadForm();else{drawBk();drawShop()}
 }
 function qInput(prefix,it,val){const id=prefix+it.k;return it.type==='choice'?`<select id="${id}"><option value="">Choose…</option>${(it.options||[]).map(o=>`<option ${val===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input id="${id}" value="${esc(val||'')}">`}
 function qCustomFields(prefix,answers){return qItems('bk').filter(it=>it.on).map(it=>`<label class="lfl"><span>${esc(it.q)}${it.req?' <em>*</em>':''}</span>${qInput(prefix,it,answers[it.k])}</label>`).join('')}
-function qMissing(answers){return qItems('bk').filter(it=>it.on&&it.req&&!String(answers[it.k]||'').trim()).map(it=>it.q)}
-function qAnswerNotes(answers){return qItems('bk').filter(it=>it.on&&String(answers[it.k]||'').trim()).map(it=>`${it.q} ${answers[it.k]}`).join('\n')}
+function qAnswerNotes(answers){return qItems('bk').filter(it=>!it.builtin&&it.on&&String(answers[it.k]||'').trim()).map(it=>`${it.q} ${answers[it.k]}`).join('\n')}
 function qPanel(scope){
   const B=S.brand,items=qItems(scope),shop=B.style==='shop';
   const rows=items.map((it,i)=>`<div class="qrow">
     <span class="qn">${i+1}</span>
     <div class="qmain"><input class="in qtext" data-qs="${scope}" data-qtext="${it.k}" value="${esc(it.q)}" aria-label="Question ${i+1} wording">
-     <div class="qmeta">${it.builtin?`<span class="muted">Saves to: ${LF_SAVE[it.k]}</span>`:`<select class="in" data-qs="${scope}" data-qtype="${it.k}" aria-label="Answer type"><option value="text" ${it.type!=='choice'?'selected':''}>Short answer</option><option value="choice" ${it.type==='choice'?'selected':''}>Multiple choice</option></select>${it.type==='choice'?`<input class="in" data-qs="${scope}" data-qopts="${it.k}" value="${esc((it.options||[]).join(', '))}" placeholder="Choices, separated by commas" aria-label="Choices">`:''}`}
-      <label class="toggle"><input type="checkbox" data-qs="${scope}" data-qon="${it.k}" ${it.on?'checked':''} ${it.lock?'disabled':''}>Ask</label>
-      <label class="toggle"><input type="checkbox" data-qs="${scope}" data-qreq="${it.k}" ${it.req?'checked':''} ${it.lock||!it.on?'disabled':''}>Required</label>
-      ${it.lock?'<span class="muted">Always asked</span>':''}</div></div>
+     <div class="qmeta">${it.builtin?`<span class="muted">Saves to: ${scope==='lf'?LF_SAVE[it.k]:BK_SAVE[it.k]}</span>`:`<select class="in" data-qs="${scope}" data-qtype="${it.k}" aria-label="Answer type"><option value="text" ${it.type!=='choice'?'selected':''}>Short answer</option><option value="choice" ${it.type==='choice'?'selected':''}>Multiple choice</option></select>${it.type==='choice'?`<input class="in" data-qs="${scope}" data-qopts="${it.k}" value="${esc((it.options||[]).join(', '))}" placeholder="Choices, separated by commas" aria-label="Choices">`:''}`}
+      <label class="toggle"><input type="checkbox" data-qs="${scope}" data-qon="${it.k}" ${it.on?'checked':''}>Ask</label>
+      <label class="toggle"><input type="checkbox" data-qs="${scope}" data-qreq="${it.k}" ${it.req?'checked':''} ${!it.on?'disabled':''}>Required</label>
+</div></div>
     <div class="qbtns">${scope==='lf'||items.length>1?`<button class="btn ghost sm" data-act="qmove" data-qs="${scope}" data-k="${it.k}" data-d="-1" ${i===0?'disabled':''} aria-label="Move up">↑</button><button class="btn ghost sm" data-act="qmove" data-qs="${scope}" data-k="${it.k}" data-d="1" ${i===items.length-1?'disabled':''} aria-label="Move down">↓</button>`:''}${it.builtin?'':`<button class="btn ghost sm danger" data-act="qdel" data-qs="${scope}" data-k="${it.k}" aria-label="Delete question">✕</button>`}</div>
    </div>`).join('');
   const steps=scope==='bk'&&!shop?`<div class="qsteps">${BK_STEPS.map(([k,l])=>`<div class="field"><label for="bkt-${k}">${l}</label><input class="in qtext" id="bkt-${k}" data-bkq="${k}" value="${esc(B.bkQ[k])}"></div>`).join('')}
      <label class="toggle"><input type="checkbox" id="bk-extras" data-bkextras="1" ${B.bkExtras!==false?'checked':''}>Ask about add-ons (step 4)</label></div>
-     <div class="eyebrow" style="margin-top:6px">Your own questions · asked on the last step</div>`:scope==='bk'?'<div class="eyebrow">Your own questions · asked at checkout</div>':'';
+     <div class="eyebrow" style="margin-top:6px">Last step questions · contact details and your own questions</div>`:scope==='bk'?'<div class="eyebrow">Checkout questions · contact details and your own questions</div>':'';
+  const on=k=>items.some(x=>x.k===k&&x.on);
+  const warn=scope==='lf'?(!on('phone')&&!on('email')?'Heads up: with no phone number or email, you won\'t be able to contact these leads.':''):(!on('bphone')?'Heads up: without a mobile number you can\'t text reminders, "on my way" messages or payment links.':'');
   return `<div class="panel qpanel"><div class="panel-h"><h3>✎ Questions</h3><span class="muted" style="font-size:12px">Click any question to change the wording</span></div>
-   <div class="panel-b" style="display:grid;gap:10px">${steps}${rows||'<p class="muted" style="margin:0">No questions of your own yet.</p>'}
+   <div class="panel-b" style="display:grid;gap:10px">${warn?`<div class="alert-soft">${warn}</div>`:''}${steps}${rows||'<p class="muted" style="margin:0">No questions of your own yet.</p>'}
     <div><button class="btn" data-act="qadd" data-qs="${scope}">+ Add a question</button></div>
-    <p class="muted" style="margin:0;font-size:12.5px">${scope==='lf'?'Name and mobile number are always asked. Answers to your own questions are saved on the lead in the Pipeline.':'Answers are saved in the job notes, so the tech sees them.'}</p></div></div>`;
+    <p class="muted" style="margin:0;font-size:12.5px">${scope==='lf'?'Every question can be reworded, made optional or turned off. Answers to your own questions are saved on the lead in the Pipeline.':'Every question can be reworded, made optional or turned off. Contact details fill in the customer; your own questions go into the job notes for the tech.'}</p></div></div>`;
 }
 
 /* shop-style booking */
@@ -2313,8 +2328,7 @@ function shopBody(){
      <div>${lines.map(([n,v,k,id])=>`<div class="sh-line"><span>${n}</span><span>${money(v)} <button data-sh="rm" data-k="${k}" data-v="${id}">Remove</button></span></div>`).join('')}<div class="sh-line" style="border:0;font-weight:700"><span>Total (before GST)</span><span>${money(cartTotal())}</span></div></div>
      ${when}
      <div class="sh-title"><h4>Your details</h4></div>
-     <input id="sh-name" placeholder="Full name" value="${esc(sh.name||'')}"><input id="sh-phone" placeholder="Mobile number" value="${esc(sh.phone||'')}">
-     ${needTime?`<input id="sh-veh" placeholder="Vehicle (e.g. 2021 Toyota RAV4)" value="${esc(sh.veh||'')}"><input id="sh-addr" placeholder="Address where the car will be" value="${esc(sh.addr||'')}">${qCustomFields('sha-',sh.ans||{})}`:''}
+     ${bkFields('sh',needTime)}
      <button class="sh-btn" data-sh="checkout" style="padding:12px" ${(needTime&&!(sh.date&&sh.time!=null))||(!needTime&&c.addons.length)?'disabled':''}>${needTime?'Book now · pay when it\'s done':c.products.length?'Place order':'Buy gift card'}</button>`;
   }
   return `<div class="sh-title"><h4>Shop by category</h4><p>Choose a category to see what we offer.</p></div>
@@ -2346,10 +2360,9 @@ function shopAction(a,v,el){
   else if(a==='date'){sh.date=v;sh.time=null}
   else if(a==='time')sh.time=+v;
   else if(a==='checkout'){
-    if(!sh.name||!sh.phone){toast('Add your name and mobile number');return}
-    if(c.svc){const m=qMissing(sh.ans||{});if(m.length){toast('Please answer: '+m.join(', '));return}}
+    {const m=bkMissing('sh',!!c.svc);if(m.length){toast('Please answer: '+m.join(', '));return}}
     if(c.svc){
-      const cu={id:'c'+Date.now(),loc:sh.loc,source:'booking',size:sh.size,vehicle:sh.veh||SIZES[sh.size].name,first:sh.date,name:sh.name,phone:sh.phone,address:sh.addr||'—'};
+      const cu={id:'c'+Date.now(),loc:sh.loc,source:'booking',size:sh.size,vehicle:sh.veh||SIZES[sh.size].name,first:sh.date,name:sh.name||'Online booking',phone:sh.phone||'—',address:sh.addr||'—'};
       S.customers.push(cu);
       const techs=EMP.filter(e=>e.loc===sh.loc&&e.wage).map(e=>({e,n:S.jobs.filter(j=>j.date===sh.date&&j.emp===e.id).length})).sort((x,y)=>x.n-y.n);
       const j={id:nextJobId(),date:sh.date,start:sh.time,loc:sh.loc,cust:cu.id,emp:techs[0].e.id,svc:c.svc,size:sh.size,price:svc(c.svc).price[sh.size],addons:c.addons.slice(),status:'scheduled',tip:0,checks:{},notes:'Booked through the online shop'+(qAnswerNotes(sh.ans||{})?'\n'+qAnswerNotes(sh.ans||{}):'')+(c.gifts.length?` · bought ${c.gifts.length} gift card(s)`:'')+(c.products.length?' · bring: '+c.products.map(id=>prod(id).name).join(', '):'')};
@@ -2371,7 +2384,7 @@ function drawBk(){
   let body='',can=false;
   const st=b.step;
   if(b.done){
-    body=`<div class="done"><div class="ok">✓</div><h4>You're booked, ${esc(b.name.split(' ')[0])}!</h4><p style="margin:0;color:#61739a;font-size:13px">${esc(sv.name)} · ${fmtDate(parse(b.date))} at ${fmtTime(b.time)}<br>We'll text a reminder the day before. Leave the car unlocked with water and power within 50 ft.</p>
+    body=`<div class="done"><div class="ok">✓</div><h4>You're booked${b.name?', '+esc(b.name.split(' ')[0]):''}!</h4><p style="margin:0;color:#61739a;font-size:13px">${esc(sv.name)} · ${fmtDate(parse(b.date))} at ${fmtTime(b.time)}<br>We'll text a reminder the day before. Leave the car unlocked with water and power within 50 ft.</p>
      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center"><button class="bk-btn" data-bk="restart">Book another</button><a class="btn" href="#calendar" data-bk="seecal">See job ${b.jobId} on calendar</a></div></div>`;
   }else if(st===0){
     body=`<h4>${esc(S.brand.bkQ.loc)}</h4>${Object.entries(LOCS).map(([k,v])=>`<button class="opt ${b.loc===k?'on':''}" data-bk="loc" data-v="${k}"><span class="t">${v.name}</span><span class="s">${k==='vic'?'Greater Victoria, Saanich, Langford, Mill Bay':'Vancouver, North Shore, Burnaby'}</span></button>`).join('')}`;can=!!b.loc;
@@ -2388,8 +2401,7 @@ function drawBk(){
     body=`<h4>${esc(S.brand.bkQ.time)}</h4><div class="days">${days.map(d=>{const ds=ymd(d),open=slotsFor(ds,b.loc).some(s=>s.left>0)&&d.getDay()!==0;return `<button data-bk="date" data-v="${ds}" class="${b.date===ds?'on':''}" ${open?'':'disabled'}>${DOW[d.getDay()]}<b>${d.getDate()}</b>${MONTHS[d.getMonth()].slice(0,3)}</button>`}).join('')}</div>
       ${b.date?`<div class="times">${sl.map(s=>`<button data-bk="time" data-v="${s.t}" class="${b.time===s.t?'on':''}" ${s.left>0?'':'disabled'}>${fmtTime(s.t)}</button>`).join('')}</div>`:'<p style="margin:0;font-size:12.5px;color:#61739a">Greyed-out days are fully booked.</p>'}`;can=!!(b.date&&b.time!=null);
   }else if(st===5){
-    body=`<h4>${esc(S.brand.bkQ.details)}</h4><input id="bk-name" placeholder="Full name" value="${esc(b.name||'')}" autocomplete="name"><input id="bk-veh" placeholder="Vehicle (e.g. 2021 Toyota RAV4)" value="${esc(b.veh||'')}"><input id="bk-phone" placeholder="Mobile number" value="${esc(b.phone||'')}" autocomplete="tel"><input id="bk-addr" placeholder="Address where the car will be" value="${esc(b.addr||'')}" autocomplete="street-address">
-      ${qCustomFields('bka-',b.ans||{})}
+    body=`<h4>${esc(S.brand.bkQ.details)}</h4>${bkFields('bk',true)}
       <p style="margin:0;font-size:12px;color:#61739a">No card needed now. You'll get a payment link by text when we're done.</p>`;can=true;
   }
   el.setAttribute('style',brandVars());
@@ -2411,10 +2423,9 @@ function bkAction(a,v){
   else if(a==='back'){b.step--;if(b.step===3&&S.brand.bkExtras===false)b.step=2}
   else if(a==='restart'){UI.bk={step:0}}
   else if(a==='confirm'){
-    b.name=$('#bk-name').value.trim();b.phone=$('#bk-phone').value.trim();b.addr=$('#bk-addr').value.trim();b.veh=$('#bk-veh').value.trim();
-    if(!b.name||!b.phone){toast('Add your name and mobile number to confirm');return}
-    {const m=qMissing(b.ans||{});if(m.length){toast('Please answer: '+m.join(', '));return}}
-    const c={id:'c'+Date.now(),loc:b.loc,source:'booking',size:b.size,vehicle:b.veh||SIZES[b.size].name,first:b.date,name:b.name,phone:b.phone,address:b.addr||'—'};
+    ['name','phone','addr','veh'].forEach(k=>b[k]=String(b[k]||'').trim());
+    {const m=bkMissing('bk',true);if(m.length){toast('Please answer: '+m.join(', '));return}}
+    const c={id:'c'+Date.now(),loc:b.loc,source:'booking',size:b.size,vehicle:b.veh||SIZES[b.size].name,first:b.date,name:b.name||'Online booking',phone:b.phone||'—',address:b.addr||'—'};
     S.customers.push(c);
     const techs=EMP.filter(e=>e.loc===b.loc&&e.wage).map(e=>({e,n:S.jobs.filter(j=>j.date===b.date&&j.emp===e.id).length})).sort((x,y)=>x.n-y.n);
     const j={id:nextJobId(),date:b.date,start:b.time,loc:b.loc,cust:c.id,emp:techs[0].e.id,svc:b.svc,size:b.size,price:svc(b.svc).price[b.size],addons:b.addons||[],status:'scheduled',tip:0,checks:{},notes:['Booked online',qAnswerNotes(b.ans||{})].filter(Boolean).join('\n')};
@@ -2500,9 +2511,9 @@ document.addEventListener('click',ev=>{
     case 'ltext':UI.pipeSel=new Set([id]);openBulk();break;
     case 'selmode':UI.selMode=!UI.selMode;if(!UI.selMode)UI.pipeSel.clear();render();break;
     case 'cust':openCustomer(id);break;
-    case 'qadd':{const sc=t.dataset.qs,q={id:'q'+Date.now(),q:'New question',type:'text',options:[],on:1,req:0};if(sc==='lf'){const L=S.leadForm;L.custom.push(q);const ix=L.order.indexOf('name');L.order.splice(ix<0?L.order.length:ix,0,q.id)}else S.brand.bkCustom.push(q);save();render();setTimeout(()=>{const el=document.querySelector(`[data-qtext="${q.id}"]`);if(el){el.focus();el.select()}},0);break}
-    case 'qmove':{const sc=t.dataset.qs,k=t.dataset.k,d=+t.dataset.d,arr=sc==='lf'?S.leadForm.order:S.brand.bkCustom,i=sc==='lf'?arr.indexOf(k):arr.findIndex(x=>x.id===k),j=i+d;if(i<0||j<0||j>=arr.length)break;[arr[i],arr[j]]=[arr[j],arr[i]];UI.lf.step=0;save();render();break}
-    case 'qdel':{const sc=t.dataset.qs,k=t.dataset.k;if(sc==='lf'){S.leadForm.custom=S.leadForm.custom.filter(x=>x.id!==k);S.leadForm.order=S.leadForm.order.filter(x=>x!==k)}else S.brand.bkCustom=S.brand.bkCustom.filter(x=>x.id!==k);UI.lf.step=0;save();render();toast('Question removed');break}
+    case 'qadd':{const sc=t.dataset.qs,q={id:'q'+Date.now(),q:'New question',type:'text',options:[],on:1,req:0};if(sc==='lf'){const L=S.leadForm;L.custom.push(q);const ix=L.order.indexOf('name');L.order.splice(ix<0?L.order.length:ix,0,q.id)}else{S.brand.bkCustom.push(q);S.brand.bkOrder.push(q.id)}save();render();setTimeout(()=>{const el=document.querySelector(`[data-qtext="${q.id}"]`);if(el){el.focus();el.select()}},0);break}
+    case 'qmove':{const sc=t.dataset.qs,k=t.dataset.k,d=+t.dataset.d,arr=sc==='lf'?S.leadForm.order:S.brand.bkOrder,i=arr.indexOf(k),j=i+d;if(i<0||j<0||j>=arr.length)break;[arr[i],arr[j]]=[arr[j],arr[i]];UI.lf.step=0;save();render();break}
+    case 'qdel':{const sc=t.dataset.qs,k=t.dataset.k;if(sc==='lf'){S.leadForm.custom=S.leadForm.custom.filter(x=>x.id!==k);S.leadForm.order=S.leadForm.order.filter(x=>x!==k)}else{S.brand.bkCustom=S.brand.bkCustom.filter(x=>x.id!==k);S.brand.bkOrder=S.brand.bkOrder.filter(x=>x!==k)}UI.lf.step=0;save();render();toast('Question removed');break}
     case 'calmove':{const m=UI.calMove;if(!m)break;const j=job(m.id),c=cust(j.cust);j.date=m.to;const n=t.dataset.n==='1';if(n)(c.log=c.log||[]).push({at:Date.now(),txt:m.msg});UI.calMove=null;save();closeLayer();render();toast(n?`Moved to ${fmtDate(parse(m.to))}. Text to ${c.name.split(' ')[0]} queued.`:`Moved to ${fmtDate(parse(m.to))}.`);break}
     case 'ivpdf':{if(!window.jspdf){toast('The PDF tool did not load. Check your internet connection and reload.');break}const d=UI.iv.d;let blob;try{blob=invoicePdf(d)}catch(e){toast('Could not build the PDF');break}saveFile(`${d.num} - ${(d.bill.name||'Customer').replace(/[\\/:*?"<>|]/g,'')}.pdf`,blob);break}
     case 'ivcsv':{const tab=UI.ivTab||'all',q=(UI.ivQ||'').toLowerCase();const rows=S.invoices.filter(i=>inLoc(i)&&(tab==='all'||invStat(i)===tab)&&(!q||(i.num+' '+i.bill.name+' '+i.bill.phone).toLowerCase().includes(q))).sort((a,b)=>a.num.localeCompare(b.num,undefined,{numeric:true}));
@@ -2607,6 +2618,7 @@ document.addEventListener('input',ev=>{
   if(t.dataset.qtext){qSet(t.dataset.qs,t.dataset.qtext,'q',t.value);return}
   if(t.dataset.qopts){qSet(t.dataset.qs,t.dataset.qopts,'options',t.value.split(',').map(x=>x.trim()).filter(Boolean));return}
   if(t.dataset.bkq){S.brand.bkQ[t.dataset.bkq]=t.value;save();drawBk();return}
+  if(/^bk-(name|phone|veh|addr)$/.test(t.id)){UI.bk[t.id.slice(3)]=t.value;return}
   if(/^bka-/.test(t.id)){(UI.bk.ans=UI.bk.ans||{})[t.id.slice(4)]=t.value;return}
   if(/^sha-/.test(t.id)){(UI.shop.ans=UI.shop.ans||{})[t.id.slice(4)]=t.value;return}
   if(/^lf-/.test(t.id)&&!t.dataset.lfc&&!t.dataset.lff){UI.lf.vals[t.id.slice(3)]=t.value;return}
@@ -2632,7 +2644,7 @@ document.addEventListener('change',ev=>{
    if(t.dataset.qtype){qSet(t.dataset.qs,t.dataset.qtype,'type',t.value);render();return}
    if(t.dataset.qon||t.dataset.qreq){const sc=t.dataset.qs,k=t.dataset.qon||t.dataset.qreq,f=t.dataset.qon?'on':'req',v=t.checked?1:0;
      if(sc==='lf'&&k in LF_Q){const F=S.leadForm.fields[k];F[f]=v;if(f==='on'&&!v)F.req=0}
-     else{const c=(sc==='lf'?S.leadForm.custom:S.brand.bkCustom).find(x=>x.id===k);if(c){c[f]=v;if(f==='on'&&!v)c.req=0}}
+     else{const c=sc==='lf'?S.leadForm.custom.find(x=>x.id===k):(S.brand.bkB[k]||S.brand.bkCustom.find(x=>x.id===k));if(c){c[f]=v;if(f==='on'&&!v)c.req=0}}
      UI.lf.step=0;save();render();return}
    if(t.dataset.bkextras){S.brand.bkExtras=t.checked;UI.bk={step:0};save();render();return}
    if(t.id==='ed-img'){readImage(t.files[0],900,u=>{UI.edit.d.img=u;drawEditor()});return}
