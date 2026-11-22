@@ -838,107 +838,33 @@ const AUTOS=[
 
 /* ---------- seed ---------- */
 function seed(){
-  const R=rng(20261116),pick=a=>a[Math.floor(R()*a.length)];
-  const wpick=o=>{let s=0;for(const k in o)s+=o[k];let x=R()*s;for(const k in o){x-=o[k];if(x<=0)return k}return Object.keys(o)[0]};
-  const S={v:4,customers:[],jobs:[],leads:[],time:[],subs:[],expenses:[],ads:[],clocks:{},services:JSON.parse(JSON.stringify(SVC_DEFAULT)),autos:JSON.parse(JSON.stringify(AUTOS)),payFreq:'biweekly'};
-  const FIRST=['Ryan','Hannah','Alyssa','Kenno','Amy','Stephanie','Triscia','Alexa','Katie','Chris','Mike','Phil','Annabel','Nickole','Megan','Jordan','Priya','Owen','Tara','Ben','Carmen','Derek','Leah','Marcus','Nadia','Graham','Sofia','Tyler','Jess','Ravi','Lauren','Evan','Mia','Colin','Hailey','Sean','Zoe','Arjun','Brooke','Liam'];
-  const LAST=['Lacey','Junell','Turpin','Legario','Nguyen','Perritt','Gagnier','Harries','Mark','Bernier','Francis','Backsman','Doyle','Chen','Singh','Wong','Martin','Roy','Campbell','MacLeod','Gill','Fraser','Tremblay','Patel','Kim','Olsen','Reid','Banks'];
-  const VEH={sedan:['2019 Honda Civic','2021 Mazda 3','2022 Tesla Model 3','2018 Toyota Corolla','2020 Hyundai Elantra','2016 Mazda 3','2023 Tesla Model Y'],suv:['2023 Nissan Rogue','2023 Toyota RAV4','2022 Honda CR-V','2023 Kia Soul','2019 Subaru Outback','2021 Mazda CX-5','2020 Jeep Cherokee','2017 Volvo XC90'],large:['2024 GMC Yukon','2022 GMC Sierra','2020 Ram 1500','2016 Toyota Tacoma','2021 Ford F-150','2019 Honda Pilot','2018 Dodge Grand Caravan','2013 Ford F-350']};
-  const ST={vic:[['Oak Bay Ave','Victoria','V8R'],['Cook St','Victoria','V8V'],['Shelbourne St','Saanich','V8P'],['Oceanside Ln','Mill Bay','V0R'],['Goldstream Ave','Langford','V9B'],['Beach Dr','Oak Bay','V8S'],['Quadra St','Victoria','V8T']],
-            van:[['W 4th Ave','Vancouver','V6K'],['Commercial Dr','Vancouver','V5N'],['Lonsdale Ave','North Vancouver','V7M'],['Kingsway','Burnaby','V5H'],['Marine Dr','West Vancouver','V7T'],['Cambie St','Vancouver','V5Z']]};
-  const TECHW={vic:{matt:45,andrew:40,sam:15},van:{jordan:55,kai:45}};
-  let cid=1,lid=1,xid=1;
-  const person=loc=>{const s=pick(ST[loc]);return{name:pick(FIRST)+' '+pick(LAST),phone:`+1 ${LOCS[loc].area} ${200+Math.floor(R()*799)} ${1000+Math.floor(R()*8999)}`,address:`${100+Math.floor(R()*8800)} ${s[0]}, ${s[1]}, BC ${s[2]} ${Math.floor(R()*9)}${'ABCEGHJKLMNPRSTVXY'[Math.floor(R()*18)]}${Math.floor(R()*9)}`}};
-  const newCustomer=(loc,d)=>{
-    const source=wpick(loc==='vic'?{facebook:48,google:17,website:15,referral:20}:{facebook:58,google:27,referral:10,website:5});
-    const size=wpick({sedan:33,suv:42,large:25});
-    const c={id:'c'+cid++,loc,source,size,vehicle:pick(VEH[size]),first:ymd(d),...person(loc)};
-    S.customers.push(c);
-    const created=ymd(addDays(d,-(1+Math.floor(R()*9))));
-    S.leads.push({id:'l'+lid++,name:c.name,phone:c.phone,loc,source,vehicle:c.vehicle,value:0,stage:'won',created,cust:c.id,log:[]});
-    const lost=SOURCES[source].paid?(R()<.55?2:1):(R()<.4?1:0);
-    for(let k=0;k<lost;k++){const p=person(loc);S.leads.push({id:'l'+lid++,name:p.name,phone:p.phone,loc,source,vehicle:pick(VEH[wpick({sedan:1,suv:1,large:1})]),value:0,stage:'lost',created,log:[]})}
-    return c};
-  const cm=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);
-  const mkJob=(d,loc,c,svc,status)=>{
-    const s=S.services.find(x=>x.id===svc);
-    const addons=(svc!=='maint'&&svc!=='luxury'&&R()<.28)?[pick(ADDONS).id]:[];
-    const j={id:0,date:ymd(d),start:pick([8,8,8.5,9,9,10,12.5,13]),loc,cust:c.id,emp:wpick(TECHW[loc]),svc,size:c.size,price:s.price[c.size],addons,status,tip:0,checks:{},notes:''};
-    if(status==='paid'){j.tip=Math.round(j.price*pick([0,0,0,.1,.15,.15,.18,.2]));j.checks=Object.fromEntries(s.sop.map((_,i)=>[i,1]))}
-    S.jobs.push(j);return j};
-  for(let mo=-5;mo<=1;mo++){
-    const ms=new Date(cm.getFullYear(),cm.getMonth()+mo,1),dim=new Date(ms.getFullYear(),ms.getMonth()+1,0).getDate();
-    for(const loc of ['vic','van']){
-      let n=loc==='vic'?22+(mo+5)*3:(mo<-1?0:mo===-1?10:17);
-      for(let i=0;i<n;i++){
-        const d=new Date(ms.getFullYear(),ms.getMonth(),1+Math.floor(R()*dim));
-        if(d.getDay()===0&&R()<.75)continue;
-        const ahead=(d-TODAY)/864e5;
-        if(ahead>24)continue;
-        if(ahead>0&&R()<ahead/30)continue;
-        const ex=S.customers.filter(c=>c.loc===loc&&c.first<ymd(d));
-        const c=(ex.length>8&&R()<.27)?pick(ex):newCustomer(loc,d);
-        let status='paid';
-        if(ymd(d)===TODAYS)status=R()<.5?'progress':'scheduled';
-        else if(d>TODAY)status=R()<.12?'quote':'scheduled';
-        else if(R()<.04)status='cancelled';
-        mkJob(d,loc,c,wpick({express:18,confidence:45,luxury:14,interior:23}),status);
-      }
-    }
-  }
-  // plan members
-  const eligible=S.customers.filter(c=>parse(c.first)<new Date(cm.getFullYear(),cm.getMonth()-1,1));
-  const subs=[];for(const c of eligible){if(subs.length>=13)break;if(R()<.16)subs.push(c)}
-  for(const c of subs){
-    const s=S.services.find(x=>x.id==='maint');const f=parse(c.first);
-    const since=new Date(f.getFullYear(),f.getMonth()+1,Math.min(f.getDate(),27));
-    S.subs.push({id:'s'+c.id,cust:c.id,loc:c.loc,price:s.price[c.size],since:ymd(since),status:'active'});
-    c.plan=true;
-    for(let d=since;(d-TODAY)/864e5<=24;d=new Date(d.getFullYear(),d.getMonth()+1,d.getDate())){
-      mkJob(d,c.loc,c,'maint',d<TODAY?'paid':ymd(d)===TODAYS?'scheduled':'scheduled');
-    }
-  }
-  S.jobs.sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start);
-  S.jobs.forEach((j,i)=>j.id=412+i);
-  // time entries for worked jobs
-  for(const j of S.jobs){
-    if(j.status!=='paid'||j.emp==='sam')continue;
-    const h=Math.round((jobDur(j,S)*(0.92+R()*.22)+0.5)*4)/4;
-    S.time.push({id:'t'+xid++,emp:j.emp,date:j.date,hours:h,job:j.id});
-  }
-  // open pipeline
-  for(const loc of ['vic','van']){
-    const n=loc==='vic'?30:18;
-    for(let i=0;i<n;i++){
-      const p=person(loc),size=wpick({sedan:1,suv:1.3,large:.8}),svc=wpick({confidence:5,interior:2,luxury:1.5,express:1.5});
-      const stage=wpick({new:18,contacted:34,quoted:26,yes:22});
-      S.leads.push({id:'l'+lid++,name:p.name,phone:p.phone,address:p.address,loc,source:wpick(loc==='vic'?{facebook:60,google:15,website:15,referral:10}:{facebook:65,google:25,website:10}),
-        vehicle:pick(VEH[size]),size,svc,value:stage==='new'?0:S.services.find(s=>s.id===svc).price[size],stage,created:ymd(addDays(TODAY,-Math.floor(R()*20))),log:[]});
-    }
-  }
-  // ad spend + expenses by month
-  for(let mo=-5;mo<=0;mo++){
-    const ms=new Date(cm.getFullYear(),cm.getMonth()+mo,1),k=mkey(ms),dim=new Date(ms.getFullYear(),ms.getMonth()+1,0).getDate();
-    const pr=mo===0?TODAY.getDate()/dim:1;
-    const ad=(loc,ch,amt)=>amt>0&&S.ads.push({month:k,loc,channel:ch,amount:Math.round(amt*pr)});
-    ad('vic','facebook',1350+(mo+5)*90+R()*160);ad('vic','google',420+R()*120);
-    if(mo>=-1){ad('van','facebook',1150+R()*150);ad('van','google',520+R()*80)}
-    const ex=(loc,cat,name,amt)=>S.expenses.push({id:'e'+xid++,month:k,loc,cat,name:name+(mo===0?' (month to date)':''),amount:Math.round(amt*pr)});
-    ex('vic','Supplies','Chemicals, towels, pads',360+R()*180);ex('vic','Vehicle','Van lease',689);ex('vic','Vehicle','Fuel',380+R()*120);
-    if(R()<.5)ex('vic','Equipment','Extractor / vac repairs',90+R()*220);
-    if(mo>=-1){ex('van','Supplies','Chemicals, towels, pads',240+R()*90);ex('van','Vehicle','Van lease',649);ex('van','Vehicle','Fuel',300+R()*90)}
-    if(mo===-1)ex('van','Equipment','Vancouver launch kit',2350);
-    ex('shared','Insurance','Commercial liability + auto',318);ex('shared','Software','Software subscriptions',296);ex('shared','Phone','Phone + SMS',92);ex('shared','Admin','Bookkeeping',150);
-  }
+  // A few clearly-labelled test records so every screen has something to show.
+  const S={v:5,customers:[],jobs:[],leads:[],time:[],subs:[],expenses:[],ads:[],clocks:{},services:JSON.parse(JSON.stringify(SVC_DEFAULT)),autos:JSON.parse(JSON.stringify(AUTOS)),payFreq:'biweekly'};
+  const d=n=>ymd(addDays(TODAY,n));
+  S.customers=[
+    {id:'c1',name:'Megan (Test)',loc:'vic',source:'facebook',size:'suv',vehicle:'2023 Toyota RAV4',first:d(-40),phone:'+1 250 555 0101',address:'123 Test St, Victoria, BC V8R 1A1',test:true},
+    {id:'c2',name:'John (Test)',loc:'vic',source:'referral',size:'large',vehicle:'2021 Ford F-150',first:d(-12),phone:'+1 250 555 0102',address:'45 Sample Ave, Saanich, BC V8P 2B2',test:true},
+    {id:'c3',name:'Priya (Test)',loc:'van',source:'google',size:'sedan',vehicle:'2022 Tesla Model 3',first:d(-5),phone:'+1 604 555 0103',address:'78 Demo Rd, Vancouver, BC V6K 3C3',test:true}];
+  const J=(id,date,start,loc,cu,emp,sv,size,status,tip=0)=>{const x=S.services.find(y=>y.id===sv);S.jobs.push({id,date,start,loc,cust:cu,emp,svc:sv,size,price:x.price[size],addons:[],status,tip,checks:status==='paid'?Object.fromEntries(x.sop.map((_,i)=>[i,1])):{},notes:'Test job'})};
+  J(1001,d(-40),9,'vic','c1','matt','confidence','suv','paid',75);
+  J(1002,d(-12),10,'vic','c2','andrew','interior','large','paid',40);
+  J(1003,d(-5),9,'van','c3','jordan','express','sedan','paid',15);
+  J(1004,d(0),9,'vic','c1','matt','express','suv','progress');
+  J(1005,d(2),13,'vic','c2','andrew','confidence','large','scheduled');
+  J(1006,d(6),9,'van','c3','kai','luxury','sedan','quote');
+  S.jobs.filter(j=>j.status==='paid').forEach((j,i)=>S.time.push({id:'t'+(i+1),emp:j.emp,date:j.date,hours:Math.round((jobDur(j,S)+.5)*4)/4,job:j.id}));
+  S.customers.forEach((c,i)=>S.leads.push({id:'lw'+(i+1),name:c.name,phone:c.phone,loc:c.loc,source:c.source,vehicle:c.vehicle,value:0,stage:'won',created:ymd(addDays(parse(c.first),-2)),cust:c.id,log:[]}));
+  S.leads.push({id:'l1',name:'Alex (Test)',phone:'+1 250 555 0104',loc:'vic',source:'facebook',vehicle:'2020 Honda CR-V',size:'suv',svc:'confidence',value:0,stage:'new',created:d(0),log:[],form:'Free quote – Victoria'});
+  S.leads.push({id:'l2',name:'Sam (Test)',phone:'+1 604 555 0105',loc:'van',source:'website',vehicle:'2019 Subaru Outback',size:'suv',svc:'confidence',value:499,stage:'quoted',created:d(-3),log:[]});
   return S;
 }
 function jobDur(j,S0){const s=(S0||S).services.find(x=>x.id===j.svc);let d=s.dur+(j.size==='suv'?.5:j.size==='large'?1:0);for(const a of j.addons)d+=(ADDONS.find(x=>x.id===a)||{dur:0}).dur;return d}
 
 /* ---------- state ---------- */
-const KEY='detailbase-draft-v4';
+const KEY='detailbase-draft-v5';
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){S=null}
-if(!S||S.v!==4)S=seed();
+if(!S||S.v!==5)S=seed();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const UI={loc:'all',role:'owner',month:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),payOffset:0,pipeSel:new Set(),selMode:false,cseg:'all',cq:'',csort:'due',ctextIds:[],pipeSrc:'all',bkTab:'booking',lfDone:false,calView:'month',calDay:TODAYS,calEmp:'all',calMode:'overall',ucHide:{},showQuotes:true,ucFilter:false,lf:{step:0,vals:{},focus:false},shop:{view:'home',cat:null,size:'suv',loc:null,q:'',cart:{svc:null,addons:[],gifts:[],products:[]}},bk:{step:0},timesheetEmp:null};
 try{const p=JSON.parse(localStorage.getItem(KEY+'-ui')||'{}');if(p.loc)UI.loc=p.loc;if(p.role)UI.role=p.role}catch(e){}
@@ -1046,7 +972,7 @@ function toggleClock(id){
   save();renderClock();if(current()==='team')render();
 }
 function setTop(title,sub,right=''){
-  $('#top').innerHTML=`<div><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="grow"></div>${right}<span class="sample">Sample data</span>`;
+  $('#top').innerHTML=`<div><h1>${title}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="grow"></div>${right}<span class="sample">Test data</span>`;
 }
 function render(){
   ensureBrand();ensureInvoices();ensureRefs();
@@ -1078,7 +1004,7 @@ function holidaysFor(y){
 const holCache={};
 const holiday=ds=>{const y=+ds.slice(0,4);if(!holCache[y])holCache[y]=holidaysFor(y);return holCache[y][ds]};
 function ucVisible(){return S.jobs.filter(j=>inLoc(j)&&(!isTech()||j.emp===me())&&(UI.calEmp==='all'||j.emp===UI.calEmp))}
-function ucLabel(j){const c=cust(j.cust)||{};return `${j.id} - ${c.vehicle||''}`}
+function ucLabel(j){const c=cust(j.cust)||{};return `${j.id} - ${c.test?'Test · ':''}${c.vehicle||''}`}
 function uchip(j){const c=cust(j.cust)||{};return `<button class="uchip" ${!isTech()&&j.status!=='paid'&&j.status!=='cancelled'?`draggable="true" data-cjob="${j.id}"`:''} style="--c:${UC_COL[j.status]}" data-st="${j.status}" data-act="job" data-id="${j.id}" title="${esc(c.name)} · ${fmtTime(j.start)} · ${esc(svc(j.svc).name)} · ${LOCS[j.loc].name}">${esc(ucLabel(j))}</button>`}
 function ucAgendaList(list){
   const by={};list.forEach(j=>(by[j.date]=by[j.date]||[]).push(j));
@@ -2467,7 +2393,7 @@ function viewRoadmap(){
     ['Phase 3 · Compound','Months 6–12',['Route optimisation per tech per day','Plan-member auto-scheduling','Tech scorecards: revenue/hr, reviews, tips, checklist completion','Location P&L for every new city','Accounting export']],
     ['Phase 4 · Sell it','Year 2+',['Multi-tenant: other detailers sign up','Benchmarks across shops (anonymised CAC, close rate, pricing)','Template SOP libraries + pricing playbooks','Your Canine Car Care numbers as the case study']]];
   $('#view').innerHTML=`<div class="road">${P.map(([t,w,items])=>`<div class="panel"><div class="panel-b"><span class="eyebrow">${w}</span><h3 style="font-size:16px;margin-top:4px">${t}</h3><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div></div>`).join('')}</div>
-   <div class="panel" style="margin-top:16px"><div class="panel-b" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center"><span class="muted" style="flex:1;min-width:220px">This draft stores its sample data in your browser. Reset it to start over.</span><button class="btn" data-act="reset">Reset sample data</button></div></div>`;
+   <div class="panel" style="margin-top:16px"><div class="panel-b" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center"><span class="muted" style="flex:1;min-width:220px">This draft stores its test data in your browser. Reset it to start over.</span><button class="btn" data-act="reset">Reset test data</button></div></div>`;
 }
 
 /* ---------- events ---------- */
@@ -2598,7 +2524,7 @@ document.addEventListener('click',ev=>{
     case 'sop':openSop(id);break;
     case 'savesop':{svc(id).sop=$('#sop-text').value.split('\n').map(s=>s.trim()).filter(Boolean);save();closeLayer();render();toast('Checklist saved. Techs see it on their next job.');break}
     case 'copyembed':{const txt=$('#embed').textContent;navigator.clipboard.writeText(txt).then(()=>toast('Embed code copied'),()=>{const r=document.createRange();r.selectNodeContents($('#embed'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Selected. Press Ctrl/Cmd + C to copy.')});break}
-    case 'reset':S=seed();save();UI.pipeSel.clear();UI.bk={step:0};toast('Sample data reset');render();break;
+    case 'reset':S=seed();save();UI.pipeSel.clear();UI.bk={step:0};toast('Test data reset');render();break;
   }
 });
 document.addEventListener('input',ev=>{
