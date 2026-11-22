@@ -45,9 +45,13 @@ export default async function NewJob({ searchParams }: { searchParams: Promise<{
                 <div className="field"><label htmlFor="address">Address</label><input className="in" id="address" name="address" autoComplete="street-address" /></div>
                 <div className="grid2">
                   <div className="field"><label htmlFor="vehicle">Vehicle</label><input className="in" id="vehicle" name="vehicle" placeholder="2021 Toyota RAV4" /></div>
+                  <div className="field"><label htmlFor="referral">Referral code (optional)</label><input className="in" id="referral" name="referral" placeholder="MEGAN50" autoCapitalize="characters" /></div>
+                </div>
+                <div className="grid2">
                   <div className="field"><label htmlFor="source">How they found you</label>
                     <select className="in" id="source" name="source" defaultValue="referral">{SOURCES.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>
                   </div>
+                  <p className="muted" style={{ margin: 0, fontSize: 12.5, alignSelf: "end" }}>A referral code links them to the customer who sent them. Every new customer gets their own code automatically.</p>
                 </div>
               </div>
             </div>

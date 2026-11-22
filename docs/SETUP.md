@@ -8,8 +8,9 @@ About 20 minutes, no coding. Do the steps in order.
 2. Click **New project**. Name it `serviceflo`, pick a strong database password (save it in your password manager), and choose the region **Canada (Central)**. Click **Create new project** and wait about 2 minutes.
 3. In the left menu, open **SQL Editor**, click **New query**.
 4. Open `supabase/migrations/0001_foundation.sql` in this repository on GitHub, click **Copy raw file**, paste it into the SQL editor, and click **Run**. You should see "Success. No rows returned".
-5. In the left menu, open **Authentication → URL Configuration** and leave it for now. You'll come back after step 2.
-6. Open **Project Settings → API**. Keep this tab open: you need the **Project URL** and the **anon public** key in step 2.
+5. Click **New query** again and do the same with `supabase/migrations/0002_referrals_and_messages.sql`. Always run the numbered files in order, once each.
+6. In the left menu, open **Authentication → URL Configuration** and leave it for now. You'll come back after step 2.
+7. Open **Project Settings → API**. Keep this tab open: you need the **Project URL** and the **anon public** key in step 2.
 
 ## 2. Put the app online (Vercel)
 

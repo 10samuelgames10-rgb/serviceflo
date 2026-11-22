@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
-import { SIZE_EXTRA_HOURS, STATUSES, type Size, type Status } from "@/lib/format";
+import { fmtDate, fmtTime, SIZE_EXTRA_HOURS, STATUSES, type Size, type Status } from "@/lib/format";
 import { servicePrice, type Service } from "@/lib/types";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -80,11 +80,19 @@ export async function createJob(form: FormData) {
   if (!customerId) {
     const name = str(form, "name");
     if (!name) back("/jobs/new", "Add the customer's name, or pick an existing customer.");
+    const refCode = str(form, "referral").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    let referredBy: string | null = null;
+    if (refCode) {
+      const { data: ref } = await ctx.supabase.from("customers").select("id").eq("business_id", bid).eq("referral_code", refCode).maybeSingle();
+      if (!ref) back("/jobs/new", `No customer has the referral code ${refCode}. Check the spelling, or leave it blank.`);
+      referredBy = ref.id as string;
+    }
     const { data: c, error } = await ctx.supabase
       .from("customers")
       .insert({
         business_id: bid, location_id: locationId, name, phone: str(form, "phone"), address: str(form, "address"),
-        vehicle: str(form, "vehicle"), vehicle_size: size, source: str(form, "source") || "referral",
+        vehicle: str(form, "vehicle"), vehicle_size: size,
+        source: referredBy ? "referral" : str(form, "source") || "referral", referred_by: referredBy,
       })
       .select("id")
       .single();
@@ -142,10 +150,50 @@ export async function saveJobDetails(form: FormData) {
   });
 }
 
+/** Moves a job and, if asked, queues a text telling the customer the new time. */
+async function moveJobAndNotify(id: string, date: string, start: string | null, notify: boolean) {
+  const ctx = await getContext();
+  const { data: job } = await ctx.supabase
+    .from("jobs")
+    .select("id, number, date, start_time, status, customer_id, customers(name, phone)")
+    .eq("id", id)
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  if (!job) return { ok: false as const, error: "That job no longer exists." };
+  if (job.status === "paid" || job.status === "cancelled") return { ok: false as const, error: "Paid and cancelled jobs can't be moved." };
+  const time = start || (job.start_time as string);
+  const { error } = await ctx.supabase.from("jobs").update({ date, start_time: time }).eq("id", id).eq("business_id", ctx.business.id);
+  if (error) return { ok: false as const, error: "The move didn't save. Try again." };
+
+  let texted = false;
+  const cust = job.customers as unknown as { name: string; phone: string } | null;
+  if (notify && cust) {
+    const first = cust.name.split(" ")[0] || "there";
+    const body = `Hi ${first}, your appointment with ${ctx.business.name} has moved to ${fmtDate(date)} at ${fmtTime(time)}. Reply here if that time doesn't work.`;
+    await ctx.supabase.from("messages").insert({
+      business_id: ctx.business.id, customer_id: job.customer_id, job_id: id, channel: "sms",
+      to_address: cust.phone ?? "", body, kind: "reschedule", status: cust.phone ? "queued" : "skipped",
+      error: cust.phone ? null : "No phone number on file",
+    });
+    texted = Boolean(cust.phone);
+  }
+  revalidatePath("/calendar");
+  revalidatePath(`/jobs/${id}`);
+  revalidatePath(`/customers/${job.customer_id}`);
+  return { ok: true as const, texted, hadPhone: Boolean(cust?.phone) };
+}
+
 export async function rescheduleJob(form: FormData) {
-  const date = str(form, "date"), start = str(form, "start");
+  const id = str(form, "id"), date = str(form, "date");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-  await updateJob(str(form, "id"), { date, start_time: start || "09:00" });
+  const r = await moveJobAndNotify(id, date, str(form, "start") || null, form.get("notify") === "on");
+  if (!r.ok) back(`/jobs/${id}`, r.error);
+}
+
+/** Used by drag-and-drop on the calendar. */
+export async function moveJob(id: string, date: string, notify: boolean) {
+  if (typeof id !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false as const, error: "That date isn't valid." };
+  return moveJobAndNotify(id, date, null, Boolean(notify));
 }
 
 /* ---------- customers ---------- */

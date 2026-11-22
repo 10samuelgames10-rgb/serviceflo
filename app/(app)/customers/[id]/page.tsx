@@ -9,18 +9,27 @@ import type { Customer } from "@/lib/types";
 
 type J = { id: string; number: number; date: string; status: string; price: number; discount: number; tip: number; service_name: string; employee_id: string | null };
 type N = { id: string; body: string; created_at: string; created_by: string | null };
+type M = { id: string; body: string; status: string; kind: string; created_at: string; error: string | null };
+type Ref = { id: string; name: string; referral_code: string; created_at: string };
 
 export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const ctx = await getContext();
-  const [{ data: c }, { data: jobs }, { data: notes }] = await Promise.all([
+  const [{ data: c }, { data: jobs }, { data: notes }, { data: referred }, { data: msgs }] = await Promise.all([
     ctx.supabase.from("customers").select("*").eq("id", id).eq("business_id", ctx.business.id).maybeSingle(),
     ctx.supabase.from("jobs").select("id, number, date, status, price, discount, tip, service_name, employee_id").eq("customer_id", id).order("date", { ascending: false }),
     ctx.supabase.from("customer_notes").select("id, body, created_at, created_by").eq("customer_id", id).order("created_at", { ascending: false }),
+    ctx.supabase.from("customers").select("id, name, referral_code, created_at").eq("referred_by", id).eq("business_id", ctx.business.id).order("created_at"),
+    ctx.supabase.from("messages").select("id, body, status, kind, created_at, error").eq("customer_id", id).order("created_at", { ascending: false }).limit(20),
   ]);
   if (!c) notFound();
   const cust = c as Customer;
+  const refs = (referred ?? []) as Ref[];
+  const messages = (msgs ?? []) as M[];
+  const { data: referrer } = cust.referred_by
+    ? await ctx.supabase.from("customers").select("id, name, referral_code").eq("id", cust.referred_by).maybeSingle()
+    : { data: null };
   const js = (jobs ?? []) as J[];
   const paid = js.filter((j) => j.status === "paid").sort((a, b) => a.date.localeCompare(b.date));
   const spent = paid.reduce((a, j) => a + Number(j.price) - Number(j.discount), 0);
@@ -44,6 +53,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           <div className="tile"><span>Average ticket</span><b>{money(paid.length ? spent / paid.length : 0)}</b></div>
           <div className="tile"><span>Frequency</span><b style={{ fontSize: 14 }}>{freq}</b></div>
           <div className="tile"><span>Tips given</span><b>{money(tips)}</b></div>
+          <div className="tile hero"><span>Referral code</span><b>{cust.referral_code}</b></div>
+          <div className="tile"><span>People referred</span><b>{refs.length}</b></div>
         </div>
         <div className="two">
           <div className="stack">
@@ -66,6 +77,27 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                     </small>
                   </div>
                 ))}
+              </div>
+            </section>
+            <section className="panel">
+              <div className="panel-h"><h3>Referrals</h3></div>
+              <div className="panel-b" style={{ display: "grid", gap: 8 }}>
+                <p style={{ margin: 0 }}>Their code is <code className="refcode">{cust.referral_code}</code>. When a new customer gives this code, enter it in the new job form and they&apos;re linked here.</p>
+                {referrer ? <p style={{ margin: 0 }}>Referred by <Link href={`/customers/${referrer.id}`}>{referrer.name}</Link> ({referrer.referral_code})</p> : null}
+                {refs.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>{refs.map((r) => <li key={r.id}><Link href={`/customers/${r.id}`}>{r.name}</Link> <span className="muted">· joined {fmtDate(r.created_at.slice(0, 10))}</span></li>)}</ul>
+                ) : <p className="muted" style={{ margin: 0 }}>Nobody has used their code yet.</p>}
+              </div>
+            </section>
+            <section className="panel">
+              <div className="panel-h"><h3>Texts</h3><span className="muted" style={{ fontSize: 12 }}>Queued texts send once texting is connected</span></div>
+              <div className="panel-b" style={{ display: "grid", gap: 8 }}>
+                {messages.length ? messages.map((m) => (
+                  <div key={m.id} className="note" style={{ background: "#f5f9ff", borderColor: "var(--line)" }}>
+                    <span>{m.body}</span>
+                    <small><span>{fmtDate(m.created_at.slice(0, 10))} · {m.kind}</span><span>{m.status === "queued" ? "Queued" : m.status === "sent" ? "Sent" : m.status === "skipped" ? `Not sent: ${m.error ?? ""}` : `Failed: ${m.error ?? ""}`}</span></small>
+                  </div>
+                )) : <p className="muted" style={{ margin: 0 }}>No texts yet.</p>}
               </div>
             </section>
             <section className="panel">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDrag } from "@/components/CalendarDrag";
 import { TopBar } from "@/components/TopBar";
 import { getContext } from "@/lib/context";
 import {
@@ -54,10 +55,15 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const label = view === "month" ? `${MONTHS[month.getMonth()]} ${month.getFullYear()}` : `Week of ${fmtDate(ymd(weekStart))}`;
   const periodName = view === "month" ? MONTHS[month.getMonth()] : "Week";
 
+  const canDrag = ctx.role !== "tech";
+  const movable = (j: Row) => canDrag && j.status !== "paid" && j.status !== "cancelled";
+  const dragProps = (j: Row) => movable(j)
+    ? { draggable: true, "data-job": j.id, "data-date": j.date, "data-label": `${j.number} - ${j.customers?.vehicle || j.customers?.name || ""}` }
+    : { draggable: false };
   const chip = (j: Row) => {
     const s = statusInfo(j.status);
     return (
-      <Link key={j.id} href={`/jobs/${j.id}`} className={`chip ${j.status === "progress" ? "dark" : ""}`} style={{ ["--c" as string]: s.color }}
+      <Link key={j.id} href={`/jobs/${j.id}`} {...dragProps(j)} className={`chip ${j.status === "progress" ? "dark" : ""}`} style={{ ["--c" as string]: s.color }}
         title={`${j.customers?.name ?? ""} · ${fmtTime(j.start_time)} · ${s.label}`}>
         {j.number} - {j.customers?.vehicle || j.customers?.name}
       </Link>
@@ -117,7 +123,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                     const day = addDays(ws, i), ds = ymd(day), list = byDate.get(ds) ?? [];
                     list.forEach((j) => { if (j.status !== "cancelled" && j.status !== "quote") wk += amount(j); });
                     return (
-                      <div key={ds} className={`cell ${day.getMonth() !== month.getMonth() ? "out" : ""}`}>
+                      <div key={ds} className={`cell ${day.getMonth() !== month.getMonth() ? "out" : ""}`} {...(canDrag ? { "data-drop-date": ds } : {})}>
                         <div className="dh">
                           <Link className={`dn ${ds === ctx.today ? "today" : ""}`} href={`?view=week&d=${ds}`}>
                             {day.getDate() === 1 ? <><b>{MONTHS[day.getMonth()].slice(0, 3)}</b>&nbsp;1</> : day.getDate()}
@@ -145,12 +151,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   const day = addDays(weekStart, i), ds = ymd(day), list = byDate.get(ds) ?? [];
                   const tot = list.filter((j) => j.status !== "cancelled" && j.status !== "quote").reduce((a, j) => a + amount(j), 0);
                   return (
-                    <div key={ds} className="wkcol">
+                    <div key={ds} className="wkcol" {...(canDrag ? { "data-drop-date": ds } : {})}>
                       <h4 className={ds === ctx.today ? "today" : ""}><span>{DOW[day.getDay()]} {day.getDate()}</span>{ctx.role === "tech" ? null : <span className="muted">{money(tot)}</span>}</h4>
                       {list.map((j) => {
                         const s = statusInfo(j.status);
                         return (
-                          <Link key={j.id} href={`/jobs/${j.id}`} className="wjob" style={{ ["--c" as string]: s.color, color: j.status === "progress" ? "#3d2f00" : "#fff" }}>
+                          <Link key={j.id} href={`/jobs/${j.id}`} {...dragProps(j)} className="wjob" style={{ ["--c" as string]: s.color, color: j.status === "progress" ? "#3d2f00" : "#fff" }}>
                             <b>{fmtTime(j.start_time)} · {j.number}</b>
                             {j.customers?.vehicle}<br />{j.customers?.name} · {hrs(Number(j.duration_hours))}
                           </Link>
@@ -179,6 +185,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             {STATUSES.map((s) => <span key={s.id} style={{ ["--c" as string]: s.color }}><i />{s.label}</span>)}
           </div>
         </div>
+        {canDrag ? <p className="muted" style={{ marginTop: 10, fontSize: 12.5 }}>Tip: drag a job onto another day to reschedule it. You&apos;ll choose whether the customer gets a text.</p> : null}
+        {canDrag ? <CalendarDrag /> : null}
         {jobs.length === 0 ? (
           <p className="muted" style={{ marginTop: 14 }}>
             No jobs here yet. {ctx.role !== "tech" ? <Link href="/jobs/new">Book your first job</Link> : "Your manager will assign jobs to you."}

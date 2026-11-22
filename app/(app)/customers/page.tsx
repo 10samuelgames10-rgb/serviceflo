@@ -12,7 +12,8 @@ export default async function Customers({ searchParams }: { searchParams: Promis
   const ctx = await getContext();
   let cq = ctx.supabase.from("customers").select("*").eq("business_id", ctx.business.id).order("name").limit(1000);
   if (ctx.locationId !== "all") cq = cq.eq("location_id", ctx.locationId);
-  if (q) cq = cq.or(`name.ilike.%${q.replace(/[%,()]/g, "")}%,phone.ilike.%${q.replace(/[%,()]/g, "")}%,vehicle.ilike.%${q.replace(/[%,()]/g, "")}%`);
+  const qs = q.replace(/[%,()]/g, "");
+  if (qs) cq = cq.or(`name.ilike.%${qs}%,phone.ilike.%${qs}%,vehicle.ilike.%${qs}%,referral_code.ilike.%${qs}%`);
   const [{ data: customers }, { data: jobs }] = await Promise.all([
     cq,
     ctx.supabase.from("jobs").select("customer_id, date, status, price, discount").eq("business_id", ctx.business.id).neq("status", "cancelled"),
@@ -40,19 +41,20 @@ export default async function Customers({ searchParams }: { searchParams: Promis
       </TopBar>
       <div className="view stack">
         <form style={{ display: "flex", gap: 8, maxWidth: 420 }}>
-          <input className="in" name="q" defaultValue={q} placeholder="Search name, phone or vehicle" aria-label="Search customers" />
+          <input className="in" name="q" defaultValue={q} placeholder="Search name, phone, vehicle or code" aria-label="Search customers" />
           <button className="btn">Search</button>
         </form>
         <div className="panel">
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr><th>Customer</th><th>Status</th><th className="r">Visits</th><th className="r">Spent</th><th>Last service</th><th>Next booked</th></tr></thead>
+              <thead><tr><th>Customer</th><th>Referral code</th><th>Status</th><th className="r">Visits</th><th className="r">Spent</th><th>Last service</th><th>Next booked</th></tr></thead>
               <tbody>
                 {list.map((c) => {
                   const s = stats.get(c.id), [label, color] = status(c.id);
                   return (
                     <tr key={c.id}>
                       <td><Link className="rowlink" href={`/customers/${c.id}`}>{c.name}</Link><span className="sub">{c.vehicle || c.phone}</span></td>
+                      <td><code className="refcode">{c.referral_code}</code></td>
                       <td><span className="pill" style={{ ["--c" as string]: color }}>{label}</span></td>
                       <td className="r">{s?.visits ?? 0}</td>
                       <td className="r">{money(s?.spent ?? 0)}</td>
@@ -61,7 +63,7 @@ export default async function Customers({ searchParams }: { searchParams: Promis
                     </tr>
                   );
                 })}
-                {list.length === 0 ? <tr><td colSpan={6} className="muted">{q ? "No customers match that search." : "No customers yet. They're added automatically when you book a job."}</td></tr> : null}
+                {list.length === 0 ? <tr><td colSpan={7} className="muted">{q ? "No customers match that search." : "No customers yet. They're added automatically when you book a job."}</td></tr> : null}
               </tbody>
             </table>
           </div>

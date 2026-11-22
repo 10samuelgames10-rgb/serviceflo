@@ -28,6 +28,8 @@ Built so far:
 - New job form, and a job screen with status steps, cancel, checklist, discount, notes, tech and reschedule
 - Customers list with visits, spend and status, and customer profiles with notes and history
 - Team and Services pages for owners and managers
+- Drag-and-drop rescheduling on the calendar, with an optional text to the customer (texts are queued until texting is connected)
+- Automatic referral codes for every customer (first name plus a number, like MEGAN50), entered on new bookings to track who referred whom
 - Security: every business only sees its own data (row level security, tested)
 
 To run it on a computer: copy `.env.example` to `.env.local`, fill in the two Supabase values, then `npm install` and `npm run dev`.

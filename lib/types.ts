@@ -14,6 +14,7 @@ export type Service = {
 export type Customer = {
   id: string; name: string; phone: string; email: string; address: string;
   vehicle: string; vehicle_size: Size; source: string; location_id: string | null; created_at: string;
+  referral_code: string; referred_by: string | null;
 };
 export type Job = {
   id: string; number: number; location_id: string | null; customer_id: string;

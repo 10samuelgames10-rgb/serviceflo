@@ -154,6 +154,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
                     <div className="field"><label htmlFor="date">Date</label><input className="in" type="date" id="date" name="date" defaultValue={job.date} /></div>
                     <div className="field"><label htmlFor="start">Start</label><input className="in" type="time" id="start" name="start" defaultValue={job.start_time.slice(0, 5)} /></div>
                   </div>
+                  <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="notify" defaultChecked />Text {c.name.split(" ")[0]} the new time{c.phone ? "" : " (no phone on file)"}</label>
                   <div><button className="btn">Move job</button></div>
                 </form>
               </section>
