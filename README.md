@@ -29,6 +29,7 @@ Built so far:
 - Customers list with visits, spend and status, and customer profiles with notes and history
 - Team and Services pages for owners and managers
 - Drag-and-drop rescheduling on the calendar, with an optional text to the customer (texts are queued until texting is connected)
+- Business phone numbers through Twilio: a texting Inbox, two-way texts (with photos), calls forwarded to your cell, voicemail with transcripts, optional call recording, missed-call text-back, click-to-call from the business number, and an "On my way" text on jobs. Setup: `docs/PHONE_SETUP.md`
 - Automatic referral codes for every customer (first name plus a number, like MEGAN50), entered on new bookings to track who referred whom
 - Security: every business only sees its own data (row level security, tested)
 

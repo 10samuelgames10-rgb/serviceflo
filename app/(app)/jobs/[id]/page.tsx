@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import { Alert } from "@/components/Alert";
 import { TopBar } from "@/components/TopBar";
 import { rescheduleJob, saveJobDetails, setJobStatus, toggleChecklistItem } from "@/app/actions";
+import { sendOnMyWay } from "@/app/phone-actions";
+import { Notice } from "@/components/Notice";
 import { getContext } from "@/lib/context";
 import { fmtDate, fmtTime, hrs, jobTotals, money, SIZES, statusInfo, timeToHours } from "@/lib/format";
 import type { Customer, Job, Service } from "@/lib/types";
 
 const STEPS = [["quote", "Quote"], ["scheduled", "Scheduled"], ["progress", "In Progress"], ["completed", "Completed"]] as const;
 
-export default async function JobPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
+export default async function JobPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; ok?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const ctx = await getContext();
@@ -35,6 +37,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
       </TopBar>
       <div className="view stack" style={{ maxWidth: 1000 }}>
         <Alert error={sp.error} />
+        <Notice ok={sp.ok} />
 
         {job.status === "cancelled" ? (
           <div className="card" style={{ padding: "14px 18px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -63,7 +66,15 @@ export default async function JobPage({ params, searchParams }: { params: Promis
         )}
 
         <section className="card">
-          <div className="card-h"><h3>Customer</h3><Link className="btn sm" href={`/customers/${c.id}`}>Customer profile ›</Link></div>
+          <div className="card-h"><h3>Customer</h3>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {job.status === "scheduled" || job.status === "progress" ? (
+                <form action={sendOnMyWay}><input type="hidden" name="id" value={job.id} /><button className="btn sm pri">➤ On my way</button></form>
+              ) : null}
+              {c.phone ? <Link className="btn sm" href={`/inbox?c=${encodeURIComponent(c.phone)}`}>Text or call</Link> : null}
+              <Link className="btn sm" href={`/customers/${c.id}`}>Customer profile ›</Link>
+            </div>
+          </div>
           <div className="crow">
             <span className="av">{c.name.slice(0, 1).toUpperCase()}</span>
             <div style={{ flex: 1, minWidth: 0 }}>

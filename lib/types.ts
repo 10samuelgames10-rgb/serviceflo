@@ -4,7 +4,7 @@ export type Business = { id: string; name: string; brand_color: string; timezone
 export type Location = { id: string; name: string; short: string };
 export type Employee = {
   id: string; name: string; role: string; wage: number; color: string;
-  location_id: string | null; active: boolean; user_id: string | null;
+  location_id: string | null; active: boolean; user_id: string | null; phone: string;
 };
 export type Service = {
   id: string; name: string; description: string; duration_hours: number;

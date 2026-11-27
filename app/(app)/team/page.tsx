@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
 import { Alert } from "@/components/Alert";
 import { TopBar } from "@/components/TopBar";
 import { addEmployee } from "@/app/actions";
+import { setEmployeePhone } from "@/app/phone-actions";
+import { prettyPhone } from "@/lib/phone";
 import { getContext } from "@/lib/context";
 import { money } from "@/lib/format";
 
@@ -10,7 +11,21 @@ const COLORS = ["#0e9a87", "#d68708", "#c2418f", "#7b5cd6", "#2f7ae5", "#e05252"
 export default async function Team({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const sp = await searchParams;
   const ctx = await getContext();
-  if (!ctx.isManager) redirect("/calendar");
+  const me = ctx.employees.find((e) => e.id === ctx.employeeId);
+  if (!ctx.isManager) {
+    return (
+      <>
+        <TopBar title="My phone" sub="Click-to-call rings this number first" />
+        <div className="view" style={{ maxWidth: 520 }}>
+          <form action={setEmployeePhone} className="panel panel-b" style={{ display: "grid", gap: 12 }}>
+            <input type="hidden" name="id" value={me?.id ?? ""} />
+            <div className="field"><label htmlFor="myphone">Your mobile number</label><input className="in" id="myphone" name="phone" inputMode="tel" defaultValue={prettyPhone(me?.phone)} placeholder="250 555 0111" /></div>
+            <div><button className="btn pri">Save</button></div>
+          </form>
+        </div>
+      </>
+    );
+  }
   return (
     <>
       <TopBar title="Team" sub="Everyone who can be assigned to jobs" />
@@ -18,13 +33,20 @@ export default async function Team({ searchParams }: { searchParams: Promise<{ e
         <section className="panel">
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr><th>Name</th><th>Role</th><th>Location</th><th className="r">Hourly wage</th><th>Login</th></tr></thead>
+              <thead><tr><th>Name</th><th>Role</th><th>Location</th><th>Mobile (for calls)</th><th className="r">Hourly wage</th><th>Login</th></tr></thead>
               <tbody>
                 {ctx.employees.map((e) => (
                   <tr key={e.id}>
                     <td><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 99, background: e.color, marginRight: 8 }} />{e.name}</td>
                     <td>{e.role}</td>
                     <td>{ctx.locations.find((l) => l.id === e.location_id)?.name ?? "—"}</td>
+                    <td>
+                      <form action={setEmployeePhone} style={{ display: "flex", gap: 6 }}>
+                        <input type="hidden" name="id" value={e.id} />
+                        <input className="in" name="phone" inputMode="tel" defaultValue={prettyPhone(e.phone)} placeholder="250 555 0111" aria-label={`Mobile for ${e.name}`} style={{ width: 150, padding: "5px 8px" }} />
+                        <button className="btn sm">Save</button>
+                      </form>
+                    </td>
                     <td className="r">{e.wage ? money(Number(e.wage), true) : "—"}</td>
                     <td>{e.user_id ? "Can sign in" : <span className="muted">Not invited yet</span>}</td>
                   </tr>

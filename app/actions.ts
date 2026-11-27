@@ -7,6 +7,7 @@ import { getContext } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate, fmtTime, SIZE_EXTRA_HOURS, STATUSES, type Size, type Status } from "@/lib/format";
 import { servicePrice, type Service } from "@/lib/types";
+import { queueAndSend } from "@/lib/messaging";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 function back(path: string, error: string): never {
@@ -170,12 +171,11 @@ async function moveJobAndNotify(id: string, date: string, start: string | null, 
   if (notify && cust) {
     const first = cust.name.split(" ")[0] || "there";
     const body = `Hi ${first}, your appointment with ${ctx.business.name} has moved to ${fmtDate(date)} at ${fmtTime(time)}. Reply here if that time doesn't work.`;
-    await ctx.supabase.from("messages").insert({
-      business_id: ctx.business.id, customer_id: job.customer_id, job_id: id, channel: "sms",
-      to_address: cust.phone ?? "", body, kind: "reschedule", status: cust.phone ? "queued" : "skipped",
-      error: cust.phone ? null : "No phone number on file",
+    const r = await queueAndSend({
+      businessId: ctx.business.id, to: cust.phone ?? "", body, kind: "reschedule",
+      customerId: job.customer_id as string, jobId: id, createdBy: ctx.user.id,
     });
-    texted = Boolean(cust.phone);
+    texted = r.ok;
   }
   revalidatePath("/calendar");
   revalidatePath(`/jobs/${id}`);

@@ -2,10 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/setup"];
+// Twilio webhooks have no user login; each one checks Twilio's signature instead.
+const PUBLIC_PATHS = ["/login", "/auth", "/setup", "/api/twilio"];
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  // Twilio webhooks don't have a user session; each route verifies Twilio's signature itself.
+  if (path.startsWith("/api/twilio")) return NextResponse.next();
   if (!isConfigured) {
     if (path.startsWith("/setup")) return NextResponse.next();
     return NextResponse.redirect(new URL("/setup", request.url));

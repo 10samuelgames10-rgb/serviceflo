@@ -43,6 +43,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   return (
     <>
       <TopBar title={cust.name} sub={`${cust.vehicle || "No vehicle yet"} · customer since ${fmtDate(cust.created_at.slice(0, 10))}`}>
+        {cust.phone ? <Link className="btn" href={`/inbox?c=${encodeURIComponent(cust.phone)}`}>Text or call</Link> : null}
         <Link className="btn pri" href={`/jobs/new?customer=${cust.id}`}>Book next service</Link>
       </TopBar>
       <div className="view stack">

@@ -7,11 +7,17 @@ import { setLocation, signOut } from "../actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getContext();
+  const [{ count: unreadTexts }, { count: unreadCalls }] = await Promise.all([
+    ctx.supabase.from("messages").select("id", { count: "exact", head: true }).eq("business_id", ctx.business.id).eq("direction", "inbound").is("read_at", null),
+    ctx.supabase.from("calls").select("id", { count: "exact", head: true }).eq("business_id", ctx.business.id).eq("direction", "inbound").in("status", ["missed", "voicemail"]).is("read_at", null),
+  ]);
   const links = [
     { href: "/calendar", label: "Calendar" },
+    { href: "/inbox", label: "Inbox", badge: (unreadTexts ?? 0) + (unreadCalls ?? 0) },
     { href: "/customers", label: "Customers" },
     { href: "/jobs/new", label: "New job" },
-    ...(ctx.isManager ? [{ href: "/team", label: "Team" }, { href: "/services", label: "Services" }] : []),
+    { href: "/team", label: ctx.isManager ? "Team" : "My phone" },
+    ...(ctx.isManager ? [{ href: "/services", label: "Services" }, { href: "/settings/phone", label: "Phone settings" }] : []),
   ];
   return (
     <div className="app">

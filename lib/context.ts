@@ -29,7 +29,7 @@ export const getContext = cache(async () => {
   const [{ data: business }, { data: locations }, { data: employees }] = await Promise.all([
     supabase.from("businesses").select("id, name, brand_color, timezone").eq("id", bid).single(),
     supabase.from("locations").select("id, name, short").eq("business_id", bid).order("created_at"),
-    supabase.from("employees").select("id, name, role, wage, color, location_id, active, user_id").eq("business_id", bid).order("created_at"),
+    supabase.from("employees").select("id, name, role, wage, color, location_id, active, user_id, phone").eq("business_id", bid).order("created_at"),
   ]);
 
   const cookieLoc = (await cookies()).get("sf_loc")?.value;
