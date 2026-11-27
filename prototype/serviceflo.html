@@ -328,6 +328,31 @@ label.fb-row{grid-template-columns:auto auto minmax(0,1fr)}
 .rep-row b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
 .rep-ins{background:#fffbea;border:1px solid #f3e3a6;border-radius:10px;padding:12px 14px;font-size:13.5px;display:grid;gap:6px}
 .rep-foot{padding:14px 22px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+/* inbox */
+.nav a .nav-badge{margin-left:auto;background:#e84545;color:#fff;border-radius:99px;font-size:11px;font-weight:600;min-width:20px;height:20px;display:inline-grid;place-items:center;padding:0 6px}
+.inbox{display:grid;grid-template-columns:300px minmax(0,1fr);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden;min-height:540px}
+.convs{border-right:1px solid var(--line);overflow-y:auto;max-height:72vh}
+.conv{display:grid;gap:2px;padding:12px 14px;border:0;border-bottom:1px solid #eef1f5;background:#fff;text-align:left;width:100%;position:relative;color:var(--fg)}
+.conv:hover{background:#f6faff}.conv.on{background:var(--accent-soft)}
+.conv-top{display:flex;justify-content:space-between;gap:8px}
+.conv-top b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-top small{color:var(--muted);white-space:nowrap;font-size:11.5px}
+.conv-prev{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:26px}
+.conv .badge{position:absolute;right:12px;bottom:12px;background:var(--accent);color:#fff;border-radius:99px;font-size:11px;font-weight:600;min-width:20px;height:20px;display:grid;place-items:center}
+.thread{display:flex;flex-direction:column;min-width:0}
+.thread-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.save-cust{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#fffbea;border-bottom:1px solid #f3e3a6;font-size:13px}
+.msgs{flex:1;overflow-y:auto;max-height:52vh;padding:16px;display:flex;flex-direction:column;gap:8px;background:#f8fbff}
+.bubble{max-width:min(78%,520px);padding:9px 12px;border-radius:16px;display:grid;gap:4px;font-size:14px}
+.bubble.in{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.bubble.out{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.bubble small{font-size:11px;opacity:.75}
+.callcard{align-self:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:grid;gap:6px;max-width:460px;font-size:13px}
+.callcard.miss{border-color:#f5c2c2;background:#fff7f7}
+.callcard .vm{background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:5px 12px;font-weight:600;justify-self:start}
+.composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);align-items:flex-end}
+.composer textarea{flex:1}
+@media (max-width:760px){.inbox{grid-template-columns:minmax(0,1fr)}.convs{max-height:240px;border-right:0;border-bottom:1px solid var(--line)}}
 /* question editor */
 .qpanel{border-color:#9cc4f2;box-shadow:0 0 0 3px var(--accent-soft),var(--shadow-sm)}
 .qrow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fbfdff}
@@ -947,13 +972,14 @@ const ICONS={
  services:'<path d="M4 4h12v12H4zM7 8h6M7 11h6M7 14h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
  booking:'<path d="M6 3h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM8 14h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
  auto:'<path d="M11 2 4 11h5l-1 7 7-9h-5l1-7Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+ chat:'<path d="M10 3.5c3.9 0 7 2.5 7 5.6s-3.1 5.6-7 5.6c-.8 0-1.6-.1-2.3-.3L4 16l.9-3.1C3.7 11.9 3 10.6 3 9.1 3 6 6.1 3.5 10 3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
  invoice:'<path d="M5.5 2.5h9v15l-2-1.3-2.2 1.3-2.3-1.3-2.5 1.3Z M8 6.5h4.5M8 9.5h4.5M8 12.5h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>',
  customers:'<path d="M10 16.5s-6-3.6-6-8A3.3 3.3 0 0 1 10 6.3a3.3 3.3 0 0 1 6 2.2c0 4.4-6 8-6 8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
  road:'<path d="M4 17 7 3M16 17 13 3M10 4v2M10 9v2M10 14v2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
  clock:'<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'};
 const ico=n=>`<svg viewBox="0 0 20 20" aria-hidden="true">${ICONS[n]}</svg>`;
-const OWNER_NAV=[['calendar','Calendar','calendar'],['pipeline','Pipeline','pipeline'],['customers','Customers','customers'],['invoices','Invoices','invoice'],['team','Team & payroll','team'],['numbers','Numbers','numbers'],['services','Products & services','services'],['booking','Booking page','booking'],['automations','Automations & API','auto'],['roadmap','Roadmap','road']];
-const TECH_NAV=[['calendar','My jobs','calendar'],['team','My hours & pay','clock']];
+const OWNER_NAV=[['calendar','Calendar','calendar'],['inbox','Inbox','chat'],['pipeline','Pipeline','pipeline'],['customers','Customers','customers'],['invoices','Invoices','invoice'],['team','Team & payroll','team'],['numbers','Numbers','numbers'],['services','Products & services','services'],['booking','Booking page','booking'],['automations','Automations & API','auto'],['roadmap','Roadmap','road']];
+const TECH_NAV=[['calendar','My jobs','calendar'],['inbox','Inbox','chat'],['team','My hours & pay','clock']];
 function routes(){return isTech()?TECH_NAV:OWNER_NAV}
 function current(){const h=location.hash.slice(1);const r=routes();return r.some(x=>x[0]===h)?h:'calendar'}
 
@@ -963,7 +989,8 @@ function renderShell(){
   $('#roleSel').value=UI.role;
   $('#locSel').value=UI.loc;$('#locSel').disabled=isTech();
   const cur=current();
-  $('#nav').innerHTML=routes().map(([id,label,ic])=>`<a href="#${id}" class="${id===cur?'on':''}">${ico(ic)}${label}</a>`).join('');
+  const unread=inboxUnread();
+  $('#nav').innerHTML=routes().map(([id,label,ic])=>`<a href="#${id}" class="${id===cur?'on':''}">${ico(ic)}${label}${id==='inbox'&&unread?`<span class="nav-badge">${unread}</span>`:''}</a>`).join('');
   renderClock();
 }
 let clockTimer=null;
@@ -992,7 +1019,7 @@ function render(){
   ensureBrand();ensureInvoices();ensureRefs();
   renderShell();
   const v=current();
-  ({calendar:viewCalendar,pipeline:viewPipeline,customers:viewCustomers,invoices:viewInvoices,team:viewTeam,numbers:viewNumbers,services:viewServices,booking:viewBooking,automations:viewAutomations,roadmap:viewRoadmap})[v]();
+  ({calendar:viewCalendar,pipeline:viewPipeline,customers:viewCustomers,inbox:viewInbox,invoices:viewInvoices,team:viewTeam,numbers:viewNumbers,services:viewServices,booking:viewBooking,automations:viewAutomations,roadmap:viewRoadmap})[v]();
 }
 function toast(msg){const h=$('#toastHost');h.innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>h.innerHTML='',3200)}
 function closeLayer(){$('#layer').innerHTML=''}
@@ -1157,7 +1184,7 @@ function openJob(id){
        ${['scheduled','progress'].includes(st)?`<button class="jd-link" data-act="omw" data-id="${j.id}">${ji('send')} ON MY WAY</button>`:''}
        ${isTech()?'':`<button class="jd-link dark" data-act="custedit" data-id="${c.id}">${ji('edit')} EDIT</button>`}</div>
       <div class="jd-crow"><span class="jd-av">${esc(c.name[0])}</span><div style="flex:1;min-width:0"><div class="nm">${esc(c.name)} <span class="pi">${ji('person')}</span>${c.plan?' <span class="pill st-paid">Plan member</span>':''}</div><div class="ph" style="user-select:all">${esc(c.phone)}</div></div>
-       <span class="jd-icons"><button title="Copy phone number" data-act="copytxt" data-v="${esc(c.phone)}" aria-label="Copy phone number">${ji('phone')}</button><button title="Text ${esc(first)}" data-act="ctext" data-id="${c.id}" aria-label="Text ${esc(first)}">${ji('chat')}</button>${isTech()?'':`<button title="Customer profile" data-act="cust" data-id="${c.id}" aria-label="Customer profile" class="chev">›</button>`}</span></div>
+       <span class="jd-icons"><button title="Call ${esc(first)}" data-act="inboxcall" data-v="${esc(c.phone)}" aria-label="Call ${esc(first)}">${ji('phone')}</button><button title="Text ${esc(first)}" data-act="inboxopen" data-v="${esc(c.phone)}" aria-label="Text ${esc(first)}">${ji('chat')}</button>${isTech()?'':`<button title="Customer profile" data-act="cust" data-id="${c.id}" aria-label="Customer profile" class="chev">›</button>`}</span></div>
       <div class="jd-crow addr"><span class="pinic">${ji('pin')}</span><div style="flex:1;min-width:0"><div class="lbl">Address</div><div class="ad">${esc(c.address)}</div></div>
        <span class="jd-icons"><a title="Open in Google Maps" aria-label="Open in Google Maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">${ji('pin')}</a><button title="Copy address" aria-label="Copy address" data-act="copytxt" data-v="${esc(c.address)}">${ji('copy')}</button></span></div>
       <div class="jd-meta"><span><span class="src ${c.source}">${SOURCES[c.source].name}</span></span><span>Customer since ${fmtDate(parse(c.first))}</span>
@@ -1464,7 +1491,7 @@ function openCustomer(id){
   $('#layer').innerHTML=`<div class="scrim" data-act="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(c.name)}">
    <div class="drawer-top"><div class="row"><h2>${esc(c.name)}</h2><span class="pill ${x.st.cls}">${x.st.name}</span><span style="flex:1"></span><button class="btn ghost" data-act="close" aria-label="Close">✕</button></div>
     <div class="muted" style="font-size:13px;margin-top:4px">${esc(c.vehicle)} · ${LOCS[c.loc].name} · customer since ${fmtDate(parse(x.first))}</div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn pri" data-act="cbook" data-id="${c.id}">Book next service</button><button class="btn" data-act="ctext" data-id="${c.id}">Text ${esc(c.name.split(' ')[0])}</button></div></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn pri" data-act="cbook" data-id="${c.id}">Book next service</button><button class="btn" data-act="inboxopen" data-v="${esc(c.phone)}">💬 Text or 📞 call</button></div></div>
    <div class="drawer-body">
     <div class="cstats">
      <div><span>Visits</span><b>${x.n}</b></div>
@@ -1514,6 +1541,76 @@ function openCustText(list){
 const INV_SET_DEFAULT={gst:'',address:'Victoria & Vancouver, BC',terms:'7',next:1001,etransfer:'',footer:'Thank you for choosing us! Questions about this invoice? Just reply to the text or email it came with.'};
 const INV_PILL={draft:['Draft','st-quote'],sent:['Sent','st-scheduled'],overdue:['Overdue','st-cancelled'],paid:['Paid','st-paid'],void:['Void','st-quote']};
 const TERMS=[['0','Due on receipt'],['7','Net 7 days'],['14','Net 14 days'],['30','Net 30 days']];
+/* ---------- inbox (preview of calling and texting) ---------- */
+const pdig=p=>String(p||'').replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+const pfmt=p=>{const d=pdig(p);return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:String(p||'')};
+const BIZ_NUM={vic:'(250) 555-0199',van:'(604) 555-0199'};
+function ensurePhone(){
+  if(S.ph)return;
+  const ago=(days,hours)=>Date.now()-days*864e5-hours*36e5;
+  const m=S.customers.find(c=>c.id==='c1'),jn=S.customers.find(c=>c.id==='c2');
+  S.ph={inbound:[],calls:[],out:[]};
+  if(m){(m.log=m.log||[]).push({at:ago(1,3),txt:'Hi Megan, reminder: your Express Wash is today at 9:00 AM. Leave the car unlocked with water and power within 50 ft!'});S.ph.inbound.push({id:'i1',phone:m.phone,body:'Hi! Any chance you could do Saturday instead? 🙏',at:ago(0,2),read:false})}
+  S.ph.calls.push({id:'k2',phone:'+1 250 555 0177',dir:'in',status:'missed',dur:0,at:ago(0,1.2),read:false});
+  S.ph.out.push({id:'o1',phone:'+1 250 555 0177',body:'Sorry we missed your call! Want a quote? Reply here and we\'ll text you right back.',at:ago(0,1.15),kind:'missed-call text-back'});
+  S.ph.inbound.push({id:'i2',phone:'+1 250 555 0177',body:'Hey, how much for a full interior on a 2019 Honda Pilot? We have 2 dogs lol',at:ago(0,1),read:false});
+  if(jn)S.ph.calls.push({id:'k1',phone:jn.phone,dir:'in',status:'voicemail',dur:0,at:ago(0,5),vm:'Hey it\'s John, just calling to confirm Tuesday. Also, can you do the truck bed? Thanks.',read:false});
+  save();
+}
+function inboxConvs(){
+  const map=new Map(),get=phone=>{const k=pdig(phone);if(!k)return null;if(!map.has(k)){const c=S.customers.find(x=>pdig(x.phone)===k);map.set(k,{k,phone,cust:c||null,items:[]})}return map.get(k)};
+  S.customers.forEach(c=>(c.log||[]).forEach(x=>{const cv=get(c.phone);if(cv)cv.items.push({t:'out',at:x.at,body:x.txt})}));
+  (S.ph.out||[]).forEach(x=>{const cv=get(x.phone);if(cv)cv.items.push({t:'out',at:x.at,body:x.body,kind:x.kind})});
+  (S.ph.inbound||[]).forEach(x=>{const cv=get(x.phone);if(cv)cv.items.push({t:'in',at:x.at,body:x.body,read:x.read})});
+  (S.ph.calls||[]).forEach(x=>{const cv=get(x.phone);if(cv)cv.items.push({t:'call',at:x.at,c:x,read:x.read})});
+  return [...map.values()].filter(cv=>cv.items.length).map(cv=>{cv.items.sort((a,b)=>a.at-b.at);cv.last=cv.items[cv.items.length-1];cv.unread=cv.items.filter(i=>(i.t==='in'||(i.t==='call'&&i.c.dir==='in'&&i.c.status!=='completed'))&&!i.read).length;return cv}).sort((a,b)=>b.last.at-a.last.at);
+}
+const inboxUnread=()=>{try{ensurePhone();return inboxConvs().reduce((a,c)=>a+c.unread,0)}catch(e){return 0}};
+const CALLTXT={missed:'Missed call',voicemail:'Voicemail',completed:'Call'};
+function whenMs(ms){const d=new Date(ms),ds=ymd(d),t=fmtTime(d.getHours()+d.getMinutes()/60);return ds===TODAYS?t:`${fmtDate(d)}, ${t}`}
+function viewInbox(){
+  ensurePhone();
+  const convs=inboxConvs(),sel=UI.inboxSel,cv=convs.find(x=>x.k===sel);
+  if(cv&&cv.unread){(S.ph.inbound||[]).forEach(x=>{if(pdig(x.phone)===sel)x.read=true});(S.ph.calls||[]).forEach(x=>{if(pdig(x.phone)===sel)x.read=true});save();renderShell()}
+  setTop('Inbox','Texts and calls to your business numbers','<button class="btn pri" data-act="inboxnew">+ New text</button>');
+  const name=c=>c.cust?c.cust.name:pfmt(c.phone);
+  const prev=i=>i.t==='call'?`📞 ${CALLTXT[i.c.status]||'Call'}`:(i.t==='out'?'You: ':'')+i.body;
+  let right;
+  if(UI.inboxNew){right=`<div class="panel-b" style="display:grid;gap:10px"><h3 style="font-size:16px">New text</h3>
+     <div class="field"><label for="inbox-to">To (mobile number)</label><input class="in" id="inbox-to" inputmode="tel" placeholder="250 555 0123"></div>
+     <div class="field"><label for="inbox-body">Message</label><textarea class="in" id="inbox-body" rows="4"></textarea></div>
+     <div><button class="btn pri" data-act="inboxsend">Send</button></div></div>`}
+  else if(!cv){right='<p class="muted" style="padding:24px;margin:0">Pick a conversation on the left, or start a new text.</p>'}
+  else{const biz=BIZ_NUM[(cv.cust&&cv.cust.loc)||'vic'];
+    right=`<header class="thread-h"><div style="min-width:0"><b style="font-size:16px">${esc(name(cv))}</b><div class="muted" style="font-size:13px">${pfmt(cv.phone)} · texts come from ${biz}${cv.cust?` · <button class="btn ghost sm" style="padding:0;color:var(--accent)" data-act="cust" data-id="${cv.cust.id}">Customer profile</button>`:''}</div></div>
+       <button class="btn" data-act="inboxcall" data-v="${esc(cv.phone)}">📞 Call</button></header>
+     ${cv.cust?'':`<div class="save-cust"><span class="muted">Not a customer yet.</span><input class="in" id="inbox-name" placeholder="Their name" style="max-width:200px"><button class="btn sm" data-act="inboxsave" data-v="${esc(cv.phone)}">Save as customer</button></div>`}
+     <div class="msgs">${cv.items.map(i=>i.t==='call'?`<div class="callcard ${i.c.status!=='completed'?'miss':''}"><b>📞 ${i.c.dir==='out'?'Outgoing':'Incoming'} · ${CALLTXT[i.c.status]||'Call'}${i.c.dur?` · ${Math.floor(i.c.dur/60)}m ${i.c.dur%60}s`:''}</b><small class="muted">${whenMs(i.at)}</small>${i.c.vm?`<div class="vm">▶ Voicemail · 0:14</div><span class="muted">“${esc(i.c.vm)}”</span>`:''}</div>`
+       :`<div class="bubble ${i.t==='out'?'out':'in'}"><span style="white-space:pre-wrap">${esc(i.body)}</span><small>${whenMs(i.at)}${i.t==='out'?' · Delivered':''}${i.kind?' · '+esc(i.kind):''}</small></div>`).join('')}</div>
+     <div class="composer"><textarea class="in" id="inbox-body" rows="2" placeholder="Text ${esc(cv.cust?cv.cust.name.split(' ')[0]:pfmt(cv.phone))}…"></textarea><button class="btn pri" data-act="inboxsend">Send</button></div>`}
+  $('#view').innerHTML=`<div class="qhint">Preview: these are test conversations and nothing really sends. In the real app, texts and calls go through your Twilio business numbers (setup guide: docs/PHONE_SETUP.md).</div>
+   <div class="inbox"><aside class="convs">${convs.map(c=>`<button class="conv ${c.k===sel&&!UI.inboxNew?'on':''}" data-act="inboxsel" data-k="${c.k}"><span class="conv-top"><b>${esc(name(c))}</b><small>${whenMs(c.last.at)}</small></span><span class="conv-prev">${esc(prev(c.last))}</span>${c.unread&&c.k!==sel?`<span class="badge">${c.unread}</span>`:''}</button>`).join('')||'<p class="muted" style="padding:16px;margin:0">No texts or calls yet.</p>'}</aside>
+   <section class="thread">${right}</section></div>`;
+  const ms=$('.msgs');if(ms)ms.scrollTop=ms.scrollHeight;
+}
+function inboxSend(){
+  const body=($('#inbox-body')||{}).value?.trim();
+  const phone=UI.inboxNew?($('#inbox-to')||{}).value?.trim():(inboxConvs().find(x=>x.k===UI.inboxSel)||{}).phone;
+  if(!phone||pdig(phone).length!==10){toast('Enter a 10-digit mobile number');return}
+  if(!body){toast('Write a message first');return}
+  const c=S.customers.find(x=>pdig(x.phone)===pdig(phone));
+  if(c)(c.log=c.log||[]).push({at:Date.now(),txt:body});else S.ph.out.push({id:'o'+Date.now(),phone,body,at:Date.now()});
+  UI.inboxNew=false;UI.inboxSel=pdig(phone);save();render();toast('Text sent (preview)');
+}
+function inboxCall(phone){
+  ensurePhone();const c=S.customers.find(x=>pdig(x.phone)===pdig(phone)),who=c?c.name.split(' ')[0]:pfmt(phone),me=emp(me_());
+  UI.inboxCallTo=phone;
+  modal('📞 Calling '+esc(who),`<p style="margin:0">ServiceFlo is ringing <b>your cell</b>. When you answer, it dials ${esc(who)} at ${pfmt(phone)}, and they see your <b>business number</b> ${BIZ_NUM[(c&&c.loc)||'vic']}, not your personal one.</p>
+    <p class="muted" style="margin:0;font-size:13px">In the real app your phone rings for real. Each person's mobile is set on the Team page.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end"><button class="btn" data-act="close">Cancel call</button><button class="btn pri" data-act="inboxcalldone">Pretend the call happened</button></div>`);
+}
+const me_=()=>UI.role==='owner'?'sam':UI.role;
+
 function ensureRefs(){
   const used=new Set(S.customers.filter(c=>c.ref).map(c=>c.ref));let changed=false;
   for(const c of S.customers){if(c.ref)continue;
@@ -2494,7 +2591,7 @@ document.addEventListener('click',ev=>{
     case 'adjopen':UI.adjOpen=true;openJob(UI.openJobId);{const f=$('#adj-amt');if(f)f.focus()}break;
     case 'adjapply':{const j=job(id),amt=+$('#adj-amt').value,pct=$('#adj-type').value==='%';if(!(amt>0)){toast('Enter a discount amount');break}const d=Math.round((pct?itemsTotal(j)*amt/100:amt)*100)/100;if(d>=itemsTotal(j)){toast('Discount must be less than the subtotal');break}j.adj=-d;UI.adjOpen=false;save();openJob(id);render();toast(`Discount of ${money(d,1)} applied`);break}
     case 'adjrm':{job(id).adj=0;save();openJob(id);render();break}
-    case 'omw':{const j=job(id),c=cust(j.cust),msg=`Hi ${c.name.split(' ')[0]}! ${emp(j.emp).name} from ${S.brand.name} is on the way 🐾`;(c.log=c.log||[]).push({at:Date.now(),txt:msg});save();toast(`"On my way" text queued for ${c.name.split(' ')[0]}`);break}
+    case 'omw':{const j=job(id),c=cust(j.cust),msg=`Hi ${c.name.split(' ')[0]}! ${emp(j.emp).name} from ${S.brand.name} is on the way 🐾`;(c.log=c.log||[]).push({at:Date.now(),txt:msg});save();toast(`"On my way" text sent to ${c.name.split(' ')[0]}. See it in the Inbox.`);renderShell();break}
     case 'sendinv':{const j=job(id);let iv=S.invoices.find(x=>x.jobId===j.id);if(!iv){iv=invFromJob(j);if(j.status==='paid'){iv.status='paid';iv.paidAt=TODAYS;iv.method='Card (payment link)'}save()}openInvoice(iv.id);break}
     case 'copytxt':{const v=t.dataset.v;navigator.clipboard.writeText(v).then(()=>toast('Copied'),()=>toast(v));break}
     case 'custedit':openCustEdit(id);break;
@@ -2511,6 +2608,13 @@ document.addEventListener('click',ev=>{
     case 'ltext':UI.pipeSel=new Set([id]);openBulk();break;
     case 'selmode':UI.selMode=!UI.selMode;if(!UI.selMode)UI.pipeSel.clear();render();break;
     case 'cust':openCustomer(id);break;
+    case 'inboxopen':{closeLayer();UI.inboxSel=pdig(t.dataset.v);UI.inboxNew=false;if(current()==='inbox')render();else location.hash='inbox';break}
+    case 'inboxsel':UI.inboxSel=t.dataset.k;UI.inboxNew=false;render();break;
+    case 'inboxnew':UI.inboxNew=true;render();break;
+    case 'inboxsend':inboxSend();break;
+    case 'inboxcall':inboxCall(t.dataset.v);break;
+    case 'inboxcalldone':{const ph=UI.inboxCallTo;S.ph.calls.push({id:'k'+Date.now(),phone:ph,dir:'out',status:'completed',dur:154,at:Date.now(),read:true});save();closeLayer();UI.inboxSel=pdig(ph);UI.inboxNew=false;if(current()==='inbox')render();else location.hash='inbox';toast('Call logged in the Inbox');break}
+    case 'inboxsave':{const n=($('#inbox-name')||{}).value?.trim();if(!n){toast('Add their name first');break}S.customers.push({id:'c'+Date.now(),name:n,phone:t.dataset.v,loc:'vic',source:'referral',size:'suv',vehicle:'',first:TODAYS,address:'—'});save();render();toast(n+' saved as a customer');break}
     case 'qadd':{const sc=t.dataset.qs,q={id:'q'+Date.now(),q:'New question',type:'text',options:[],on:1,req:0};if(sc==='lf'){const L=S.leadForm;L.custom.push(q);const ix=L.order.indexOf('name');L.order.splice(ix<0?L.order.length:ix,0,q.id)}else{S.brand.bkCustom.push(q);S.brand.bkOrder.push(q.id)}save();render();setTimeout(()=>{const el=document.querySelector(`[data-qtext="${q.id}"]`);if(el){el.focus();el.select()}},0);break}
     case 'qmove':{const sc=t.dataset.qs,k=t.dataset.k,d=+t.dataset.d,arr=sc==='lf'?S.leadForm.order:S.brand.bkOrder,i=arr.indexOf(k),j=i+d;if(i<0||j<0||j>=arr.length)break;[arr[i],arr[j]]=[arr[j],arr[i]];UI.lf.step=0;save();render();break}
     case 'qdel':{const sc=t.dataset.qs,k=t.dataset.k;if(sc==='lf'){S.leadForm.custom=S.leadForm.custom.filter(x=>x.id!==k);S.leadForm.order=S.leadForm.order.filter(x=>x!==k)}else{S.brand.bkCustom=S.brand.bkCustom.filter(x=>x.id!==k);S.brand.bkOrder=S.brand.bkOrder.filter(x=>x!==k)}UI.lf.step=0;save();render();toast('Question removed');break}
